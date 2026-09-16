@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full w-full overflow-hidden">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cautio | AI Fleet Safety Telemetry & National Hotzone Radar</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cautio: {
+              dark: '#2A7C13',      // Primary Brand Forest Green
+              leaf: '#76C457',      // Vivid Leaf / Radar Green
+              cream: '#FFF8CF',     // Warm Lemon Cream
+              sand: '#FBE6C2',      // Warm Apricot Sand
+              bg: '#081408',        // Obsidian Forest Dark Background
+              card: '#0e230e',      // Card Dark Surface
+              cardalt: '#143314',   // Elevated Card Surface
+              subtle: '#1b401b',    // Input & Chip Surface
+              hover: '#225022',     // Hover State
+              textmuted: '#c4dcbe', // Muted Sage Text
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Leaflet MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Global Viewport & Palette Reset */
+    html, body {
+      height: 100%;
+      min-height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #081408;
+      color: #FFF8CF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Scrollbars in Cautio Theme */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(8, 20, 8, 0.7);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2A7C13;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #76C457;
+    }
+
+    /* ==========================================================================
+       APPLE LIQUID GLASS ENGINE (VISIONOS / IOS 18 LIQUID GLASSMORPHISM)
+       ========================================================================== */
+    .liquid-glass {
+      background: rgba(12, 28, 12, 0.68) !important;
+      backdrop-filter: blur(28px) saturate(190%) contrast(105%) !important;
+      -webkit-backdrop-filter: blur(28px) saturate(190%) contrast(105%) !important;
+      border-top: 1px solid rgba(255, 248, 207, 0.35) !important;
+      border-left: 1px solid rgba(118, 196, 87, 0.28) !important;
+      border-right: 1px solid rgba(118, 196, 87, 0.28) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.45) !important;
+      box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.65),
+        0 1px 0 rgba(255, 248, 207, 0.25) inset,
+        0 -1px 0 rgba(0, 0, 0, 0.35) inset !important;
+    }
+
+    .liquid-glass-card {
+      background: rgba(14, 34, 14, 0.55) !important;
+      backdrop-filter: blur(24px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+      border-top: 1px solid rgba(255, 248, 207, 0.28) !important;
+      border-left: 1px solid rgba(118, 196, 87, 0.22) !important;
+      border-right: 1px solid rgba(118, 196, 87, 0.22) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.4) !important;
+      box-shadow: 
+        0 12px 32px rgba(0, 0, 0, 0.5),
+        0 1px 0 rgba(255, 248, 207, 0.2) inset !important;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .liquid-glass-card:hover {
+      background: rgba(18, 44, 18, 0.7) !important;
+      border-top-color: rgba(255, 248, 207, 0.45) !important;
+      border-left-color: rgba(118, 196, 87, 0.45) !important;
+      border-right-color: rgba(118, 196, 87, 0.45) !important;
+      box-shadow: 
+        0 16px 40px rgba(0, 0, 0, 0.6),
+        0 0 20px rgba(118, 196, 87, 0.25),
+        0 1px 0 rgba(255, 248, 207, 0.35) inset !important;
+      transform: translateY(-1px);
+    }
+
+    .liquid-pill {
+      background: rgba(18, 42, 18, 0.55) !important;
+      backdrop-filter: blur(16px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+      border: 1px solid rgba(118, 196, 87, 0.3) !important;
+      box-shadow: 
+        0 4px 15px rgba(0, 0, 0, 0.4),
+        0 1px 0 rgba(255, 248, 207, 0.2) inset !important;
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .liquid-pill:hover {
+      background: rgba(42, 124, 19, 0.6) !important;
+      border-color: rgba(118, 196, 87, 0.6) !important;
+      color: #FFF8CF !important;
+      box-shadow: 
+        0 6px 20px rgba(0, 0, 0, 0.5),
+        0 0 16px rgba(118, 196, 87, 0.35),
+        0 1px 0 rgba(255, 248, 207, 0.35) inset !important;
+      transform: translateY(-1px) scale(1.02);
+    }
+    .liquid-pill-active {
+      background: linear-gradient(135deg, rgba(42, 124, 19, 0.95) 0%, rgba(118, 196, 87, 0.75) 100%) !important;
+      border-color: #76C457 !important;
+      color: #FFF8CF !important;
+      box-shadow: 
+        0 6px 25px rgba(42, 124, 19, 0.55),
+        0 0 20px rgba(118, 196, 87, 0.45),
+        0 1px 0 rgba(255, 248, 207, 0.6) inset !important;
+    }
+
+    /* Spring-Loaded Drawer Animations */
+    .drawer-spring {
+      transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease !important;
+    }
+
+    /* Map Edge-to-Edge Canvas */
+    #map-container {
+      height: 100vh !important;
+      width: 100vw !important;
+      position: absolute !important;
+      inset: 0 !important;
+      background: #081408 !important;
+      z-index: 10 !important;
+    }
+
+    /* Leaflet Overrides & Ultra-Smooth Zoom Physics */
+    .leaflet-container {
+      background-color: #081408 !important;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      height: 100% !important;
+      width: 100% !important;
+    }
+    .leaflet-tile {
+      image-rendering: auto;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .leaflet-tile-container {
+      will-change: transform;
+    }
+    .leaflet-zoom-anim .leaflet-zoom-animated {
+      will-change: transform;
+      transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .leaflet-popup-content-wrapper {
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+    .leaflet-popup-tip {
+      background: rgba(14, 35, 14, 0.9) !important;
+      border: 1px solid #76C457 !important;
+    }
+    .leaflet-popup-content {
+      margin: 0 !important;
+      line-height: 1.4 !important;
+    }
+
+    /* ==========================================================================
+       APPLE VISIONOS LIQUID GLASS MODAL ENGINE
+       ========================================================================== */
+    #incident-modal {
+      z-index: 999999 !important;
+      position: fixed !important;
+      inset: 0 !important;
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #incident-modal > div {
+      z-index: 1000000 !important;
+    }
+    .liquid-modal-backdrop {
+      background: radial-gradient(circle at 50% 30%, rgba(14, 38, 14, 0.65) 0%, rgba(4, 12, 4, 0.88) 100%) !important;
+      backdrop-filter: blur(32px) saturate(200%) contrast(105%) !important;
+      -webkit-backdrop-filter: blur(32px) saturate(200%) contrast(105%) !important;
+    }
+    .liquid-modal-window {
+      background: linear-gradient(145deg, rgba(16, 42, 16, 0.82) 0%, rgba(8, 22, 8, 0.90) 60%, rgba(5, 14, 5, 0.96) 100%) !important;
+      backdrop-filter: blur(40px) saturate(220%) !important;
+      -webkit-backdrop-filter: blur(40px) saturate(220%) !important;
+      border-top: 1.5px solid rgba(255, 248, 207, 0.5) !important;
+      border-left: 1px solid rgba(118, 196, 87, 0.4) !important;
+      border-right: 1px solid rgba(118, 196, 87, 0.4) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.6) !important;
+      box-shadow: 
+        0 40px 100px rgba(0, 0, 0, 0.85),
+        0 0 60px rgba(42, 124, 19, 0.3),
+        inset 0 1.5px 1px rgba(255, 248, 207, 0.45),
+        inset 0 -1px 1px rgba(118, 196, 87, 0.2) !important;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .liquid-bento-tile {
+      background: rgba(12, 32, 12, 0.55) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+      border-top: 1px solid rgba(255, 248, 207, 0.3) !important;
+      border-left: 1px solid rgba(118, 196, 87, 0.25) !important;
+      border-right: 1px solid rgba(118, 196, 87, 0.25) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.45) !important;
+      border-radius: 1.25rem !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 248, 207, 0.18) !important;
+      transition: all 0.25s ease;
+    }
+    .liquid-bento-tile:hover {
+      background: rgba(16, 40, 16, 0.7) !important;
+      border-top-color: rgba(255, 248, 207, 0.45) !important;
+      border-left-color: rgba(118, 196, 87, 0.4) !important;
+      border-right-color: rgba(118, 196, 87, 0.4) !important;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 20px rgba(118, 196, 87, 0.25) !important;
+    }
+    .liquid-field-well {
+      background: rgba(6, 16, 6, 0.65) !important;
+      border: 1px solid rgba(118, 196, 87, 0.22) !important;
+      border-radius: 0.875rem !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* Corridor Custom Liquid Dropdown */
+    .corridor-menu-glass {
+      background: rgba(10, 26, 10, 0.94) !important;
+      backdrop-filter: blur(32px) saturate(210%) !important;
+      -webkit-backdrop-filter: blur(32px) saturate(210%) !important;
+      border-top: 1.5px solid rgba(255, 248, 207, 0.45) !important;
+      border-left: 1px solid rgba(118, 196, 87, 0.35) !important;
+      border-right: 1px solid rgba(118, 196, 87, 0.35) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.6) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(42, 124, 19, 0.35), inset 0 1px 0 rgba(255, 248, 207, 0.25) !important;
+    }
+    .corridor-option {
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .corridor-option:hover {
+      background: rgba(42, 124, 19, 0.45) !important;
+      transform: translateX(2px);
+    }
+    .corridor-option.active {
+      background: rgba(42, 124, 19, 0.75) !important;
+      border: 1px solid rgba(118, 196, 87, 0.5) !important;
+    }
+
+    /* Map Panes Stacking Order: Numbers strictly sit in front of hot dots */
+    .leaflet-pane.leaflet-spotlightPane-pane {
+      z-index: 550 !important;
+      pointer-events: auto !important;
+    }
+    .leaflet-pane.leaflet-clusterPane-pane {
+      z-index: 650 !important;
+      pointer-events: auto !important;
+    }
+    .leaflet-pane.leaflet-badgePane-pane {
+      z-index: 720 !important;
+      pointer-events: auto !important;
+    }
+
+    /* Interactive Spotlight Accident Dots & Cluster Pins */
+    .leaflet-pane.leaflet-spotlightPane-pane svg path,
+    .leaflet-pane.leaflet-spotlightPane-pane .leaflet-interactive {
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+    .leaflet-pane.leaflet-spotlightPane-pane svg path:hover {
+      filter: drop-shadow(0 0 8px #f43f5e);
+    }
+    .custom-cluster-icon {
+      cursor: pointer !important;
+      background: transparent !important;
+      border: none !important;
+      z-index: 650 !important;
+    }
+    .custom-vehicle-pin {
+      cursor: pointer !important;
+      background: transparent !important;
+      border: none !important;
+    }
+    .custom-hotzone-count-badge {
+      cursor: pointer !important;
+      background: transparent !important;
+      border: none !important;
+      z-index: 720 !important;
+    }
+
+    /* ==========================================================================
+       CLEAN COMPACT CAUTIO BOTTOM BUBBLE
+       ========================================================================== */
+    .leaflet-control-attribution {
+      background: rgba(12, 28, 12, 0.88) !important;
+      backdrop-filter: blur(20px) saturate(190%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+      border: 1px solid rgba(118, 196, 87, 0.35) !important;
+      border-radius: 9999px !important;
+      padding: 3px 8px !important;
+      margin: 10px 12px !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+      font-size: 0 !important;
+      line-height: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      max-width: fit-content !important;
+      transition: all 0.3s ease;
+    }
+    .leaflet-control-attribution:hover {
+      background: rgba(18, 44, 18, 0.98) !important;
+      border-color: rgba(118, 196, 87, 0.7) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 14px rgba(118, 196, 87, 0.35) !important;
+      transform: scale(1.02);
+    }
+    /* Hide all tile copyright links and extra Leaflet text */
+    .leaflet-control-attribution * {
+      font-size: 0 !important;
+    }
+    .leaflet-control-attribution a {
+      display: none !important;
+    }
+    .cautio-bottom-bubble {
+      display: inline-flex !important;
+      align-items: center !important;
+      text-decoration: none !important;
+    }
+    .cautio-bottom-bubble img {
+      height: 12px !important;
+      width: auto !important;
+      display: block !important;
+    }
+  </style>
+</head>
+<body class="bg-[#081408] text-[#FFF8CF] font-sans h-screen w-screen overflow-hidden relative selection:bg-[#76C457] selection:text-[#081408]">
+
+  <!-- ==========================================================================
+       MAIN CENTERPIECE: EDGE-TO-EDGE NATIONAL HEATMAP CANVAS
+       ========================================================================== -->
+  <div id="map-container" class="w-full h-full"></div>
+
+  <!-- BACKDROP OVERLAY FOR ALL DRAWERS -->
+  <div id="drawer-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[450] opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+  <!-- ==========================================================================
+       TOP FLOATING APPLE DYNAMIC ISLAND COMMAND BAR
+       Prioritized, minimalist, glassmorphic capsule floating cleanly over the map
+       ========================================================================== -->
+  <header class="fixed top-4 left-4 right-4 z-[500] pointer-events-none flex items-center justify-between">
+    
+    <!-- LEFT: Official Cautio Brand Capsule -->
+    <div class="pointer-events-auto liquid-glass rounded-full px-4 py-2 flex items-center gap-3 shadow-2xl">
+      <div class="flex items-center gap-2.5">
+        <img src="cautio-logo.svg" alt="Cautio" class="h-6 sm:h-7 w-auto object-contain" />
+        <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-[#2A7C13]/90 text-[#FFF8CF] border border-[#76C457]/70 tracking-widest shadow-sm">RADAR</span>
+      </div>
+
+      <div class="h-4 w-px bg-[#76C457]/30"></div>
+
+      <!-- Live Sync Indicator: Minimalist Green Dot, expands smoothly on status change -->
+      <div class="relative flex items-center group cursor-pointer" id="live-status-container" title="Google Sheets Auto-Sync Engine">
+        <div id="live-sync-dot" class="w-2.5 h-2.5 rounded-full bg-[#76C457] animate-pulse shadow-[0_0_10px_#76C457] transition-all duration-300"></div>
+        <span id="live-sync-badge" class="text-[11px] font-bold text-[#FFF8CF] whitespace-nowrap overflow-hidden transition-all duration-500 max-w-0 opacity-0 group-hover:max-w-[280px] group-hover:opacity-100 group-hover:pl-2"></span>
+      </div>
+    </div>
+
+    <!-- CENTER: PRIMARY USER CONTROL PILLS (PRIORITIZED BY USAGE) -->
+    <nav class="pointer-events-auto liquid-glass rounded-full p-1.5 flex items-center gap-1 shadow-2xl">
+      
+      <!-- 1. Map Radar (Active Default Indicator) -->
+      <button id="btn-mode-map" onclick="closeAllDrawers()" class="liquid-pill liquid-pill-active rounded-full px-4 py-1.5 text-xs font-black flex items-center gap-1.5 transition">
+        <i data-lucide="map" class="w-3.5 h-3.5 text-[#FFF8CF]"></i>
+        <span class="hidden md:inline">Heatmap</span>
+      </button>
+
+      <!-- 2. Freight Corridor Liquid Glass Dropdown on the Bar -->
+      <div class="relative" id="corridor-dropdown-container">
+        <button id="btn-corridor-dropdown" onclick="toggleCorridorMenu()" type="button" class="liquid-pill rounded-full px-3.5 py-1.5 text-xs font-bold text-[#FBE6C2] flex items-center gap-1.5 transition group" title="Select Freight Corridor">
+          <i data-lucide="navigation" class="w-3.5 h-3.5 text-[#76C457] group-hover:rotate-45 transition-transform"></i>
+          <span id="corridor-dropdown-label" class="whitespace-nowrap">All India Corridors</span>
+          <i id="corridor-dropdown-chevron" data-lucide="chevron-down" class="w-3 h-3 text-[#76C457] transition-transform duration-200"></i>
+        </button>
+
+        <!-- Hidden input for state -->
+        <input type="hidden" id="bar-corridor-select" value="all">
+
+        <!-- Thematic Liquid Glass Dropdown Menu -->
+        <div id="corridor-dropdown-menu" class="hidden absolute left-0 top-full mt-2 w-72 sm:w-80 corridor-menu-glass rounded-2xl p-2 z-[600] space-y-1 text-xs">
+          <div class="px-3 py-1.5 border-b border-[#76C457]/20 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-[#FBE6C2]">
+            <span>Strategic Freight Corridors</span>
+            <span class="text-[#76C457] font-bold">9 Belts</span>
+          </div>
+          
+          <div class="max-h-72 overflow-y-auto space-y-1 pr-1">
+            <!-- All Corridors -->
+            <div onclick="selectBarCorridor('all', 'All India Corridors')" class="corridor-option corridor-menu-item active w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#FFF8CF]" data-corridor-id="all">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-[#76C457] shadow-[0_0_8px_#76C457]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">All India Corridors</div>
+                  <div class="text-[10px] text-[#c4dcbe]">National Surveillance Grid</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+
+            <!-- Bangalore -->
+            <div onclick="selectBarCorridor('bangalore', 'Bangalore Belt')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="bangalore">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Bangalore Logistics Belt</div>
+                  <div class="text-[10px] text-[#c4dcbe]">Karnataka (Electronic City, Hosur)</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+
+            <!-- Mumbai-Pune -->
+            <div onclick="selectBarCorridor('mumbai-pune', 'Mumbai-Pune Belt')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="mumbai-pune">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Mumbai-Pune Expressway</div>
+                  <div class="text-[10px] text-[#c4dcbe]">Maharashtra (JNPT, Bhiwandi, Pune)</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+
+            <!-- Delhi-NCR -->
+            <div onclick="selectBarCorridor('delhi-ncr', 'Delhi-NCR Gateway')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="delhi-ncr">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-[#FBE6C2] shadow-[0_0_8px_rgba(251,230,194,0.6)]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Delhi-NCR Gateway</div>
+                  <div class="text-[10px] text-[#c4dcbe]">Delhi / Haryana / UP (NH-48)</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+
+            <!-- Chennai-Krishnagiri -->
+            <div onclick="selectBarCorridor('chennai-krishnagiri', 'Chennai-Krishnagiri Auto')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="chennai-krishnagiri">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-[#76C457] shadow-[0_0_8px_rgba(118,196,87,0.6)]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Chennai-Krishnagiri Auto</div>
+                  <div class="text-[10px] text-[#c4dcbe]">Tamil Nadu (Oragadam, Sriperumbudur)</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+
+            <!-- Hyderabad -->
+            <div onclick="selectBarCorridor('hyderabad', 'Hyderabad Cyber Belt')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="hyderabad">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-[#2A7C13] shadow-[0_0_8px_rgba(42,124,19,0.6)]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Hyderabad Cyber Belt</div>
+                  <div class="text-[10px] text-[#c4dcbe]">Telangana (ORR, Shamshabad)</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+
+            <!-- Kolkata -->
+            <div onclick="selectBarCorridor('kolkata', 'Kolkata Eastern Hub')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="kolkata">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Kolkata Eastern Hub</div>
+                  <div class="text-[10px] text-[#c4dcbe]">West Bengal (Howrah, Dankuni)</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+
+            <!-- Punjab-Haryana GT -->
+            <div onclick="selectBarCorridor('punjab-gt', 'Punjab-Haryana GT')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="punjab-gt">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Punjab-Haryana GT Road</div>
+                  <div class="text-[10px] text-[#c4dcbe]">Punjab / HR (Amritsar, Ludhiana)</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+
+            <!-- Gujarat Corridor -->
+            <div onclick="selectBarCorridor('gujarat', 'Gujarat Corridor')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="gujarat">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Gujarat Industrial Corridor</div>
+                  <div class="text-[10px] text-[#c4dcbe]">Gujarat (Ahmedabad, Vadodara, Surat)</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+
+            <!-- Central India Grid -->
+            <div onclick="selectBarCorridor('central-india', 'Central India Grid')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="central-india">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]"></div>
+                <div>
+                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Central Logistics Grid</div>
+                  <div class="text-[10px] text-[#c4dcbe]">Nagpur / Raipur (MIHAN, Bhilai)</div>
+                </div>
+              </div>
+              <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Total Telemetry Count Pill -->
+      <div class="liquid-pill rounded-full px-3 py-1.5 text-xs font-bold text-[#FBE6C2] flex items-center gap-1.5" title="Total Incidents Loaded on Heatmap">
+        <span class="w-2 h-2 rounded-full bg-[#76C457] shadow-[0_0_8px_rgba(118,196,87,0.7)] animate-pulse"></span>
+        <span class="text-[#c4dcbe] hidden md:inline">Telemetry:</span>
+        <span id="bar-incident-count" class="font-mono font-black text-[#FFF8CF]">12,542</span>
+      </div>
+
+      <!-- 3. Today's Entries Quick Filter Pill -->
+      <button id="btn-toggle-today" onclick="toggleTodayFilter()" class="liquid-pill rounded-full px-3.5 py-1.5 text-xs font-bold text-[#FBE6C2] flex items-center gap-1.5 transition group" title="Filter to Today's Incident Reports">
+        <i data-lucide="calendar" class="w-3.5 h-3.5 text-[#76C457] group-hover:scale-110 transition-transform"></i>
+        <span>Today's Entries</span>
+        <span id="badge-today-count" class="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-[#2A7C13] text-[#FFF8CF] border border-[#76C457]">0</span>
+      </button>
+
+      <!-- 3. Filters Trigger Pill -->
+      <button id="btn-toggle-filters" onclick="toggleDrawer('filters')" class="liquid-pill rounded-full px-3.5 py-1.5 text-xs font-bold text-[#FBE6C2] flex items-center gap-1.5 transition">
+        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-[#76C457]"></i>
+        <span>Filters</span>
+        <span id="active-filter-badge" class="hidden text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-[#2A7C13] text-[#FFF8CF] border border-[#76C457]">0</span>
+      </button>
+
+      <!-- 4. Insights & Analytics Trigger Pill -->
+      <button id="btn-toggle-insights" onclick="toggleDrawer('insights')" class="liquid-pill rounded-full px-3.5 py-1.5 text-xs font-bold text-[#FBE6C2] flex items-center gap-1.5 transition">
+        <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-[#76C457]"></i>
+        <span class="hidden sm:inline">Insights &</span><span>KPIs</span>
+      </button>
+
+      <!-- 5. Incident Logbook Trigger Pill -->
+      <button id="btn-toggle-logbook" onclick="toggleDrawer('logbook')" class="liquid-pill rounded-full px-3.5 py-1.5 text-xs font-bold text-[#FBE6C2] flex items-center gap-1.5 transition">
+        <i data-lucide="table-2" class="w-3.5 h-3.5 text-[#76C457]"></i>
+        <span>Logbook</span>
+      </button>
+
+    </nav>
+
+    <!-- RIGHT: QUICK ACTIONS & SYSTEM PILL -->
+    <div class="pointer-events-auto liquid-glass rounded-full px-3 py-1.5 flex items-center gap-1.5 shadow-2xl">
+      
+      <!-- Sync Now -->
+      <button id="btn-sync-now" title="Force Sync Google Sheet" class="liquid-pill rounded-full p-2 text-[#FFF8CF] flex items-center justify-center">
+        <i id="sync-icon" data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#76C457]"></i>
+      </button>
+
+      <!-- Fullscreen -->
+      <button id="btn-fullscreen" title="Toggle Fullscreen Wall View" class="liquid-pill rounded-full p-2 text-[#FFF8CF] flex items-center justify-center">
+        <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+      </button>
+
+      <!-- Sheet Direct Link -->
+      <a href="https://docs.google.com/spreadsheets/d/1DzW-6Q7hTNn2hSJbEHOkSrbalOmbDIftdjw4I_PhEdA/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer" title="Open Google Sheet Database" class="liquid-pill rounded-full p-2 text-[#FBE6C2] flex items-center justify-center">
+        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+      </a>
+
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       RIGHT FLOATING GLASS MAP HUD CONTROLS
+       ========================================================================== -->
+  <aside class="fixed top-20 right-4 z-[400] pointer-events-auto flex flex-col gap-2">
+    
+    <!-- Zoom & Re-center Island -->
+    <div class="liquid-glass rounded-2xl p-1.5 flex flex-col gap-1 shadow-2xl">
+      <button id="hud-zoom-in" title="Zoom In" class="liquid-pill rounded-xl w-9 h-9 text-[#FFF8CF] font-black text-base flex items-center justify-center">
+        +
+      </button>
+      <button id="hud-zoom-out" title="Zoom Out" class="liquid-pill rounded-xl w-9 h-9 text-[#FFF8CF] font-black text-base flex items-center justify-center">
+        &minus;
+      </button>
+      <button id="hud-reset-india" title="Center Full India" class="liquid-pill rounded-xl w-9 h-9 text-[#76C457] flex items-center justify-center">
+        <i data-lucide="compass" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Quick Layers Glass Toggle Island -->
+    <div class="liquid-glass rounded-2xl p-1.5 flex flex-col gap-1 shadow-2xl">
+      <button id="btn-toggle-layers-pop" title="Toggle Overlays" onclick="document.getElementById('layers-popover').classList.toggle('hidden')" class="liquid-pill rounded-xl w-9 h-9 text-[#FFF8CF] flex items-center justify-center">
+        <i data-lucide="layers" class="w-4 h-4 text-[#76C457]"></i>
+      </button>
+    </div>
+
+    <!-- Layers Popover Menu (Glass) -->
+    <div id="layers-popover" class="hidden absolute right-12 top-28 w-56 liquid-glass rounded-2xl p-3.5 shadow-2xl space-y-2 text-xs">
+      <div class="font-extrabold text-[#FFF8CF] text-[11px] uppercase tracking-wider border-b border-[#76C457]/20 pb-1.5 flex items-center justify-between">
+        <span>Map Overlays</span>
+        <button onclick="document.getElementById('layers-popover').classList.add('hidden')" class="text-[#FBE6C2] hover:text-white">&times;</button>
+      </div>
+      <label class="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-[#143314]">
+        <input id="toggle-layer-heat" type="checkbox" checked class="accent-[#76C457] rounded">
+        <span>Heatmap Density</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-[#143314]">
+        <input id="toggle-layer-clusters" type="checkbox" checked class="accent-[#76C457] rounded">
+        <span>Incident Clusters & Counts</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-[#143314]">
+        <input id="toggle-layer-zones" type="checkbox" checked class="accent-[#76C457] rounded">
+        <span>Hotzone Hub Numbers</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-[#143314]">
+        <input id="toggle-layer-spotlight" type="checkbox" checked class="accent-[#76C457] rounded">
+        <span>Collision Spotlight</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-[#143314]">
+        <input id="toggle-layer-boundary" type="checkbox" checked class="accent-[#76C457] rounded">
+        <span class="text-[#76C457] font-bold">India Boundary</span>
+      </label>
+    </div>
+
+    <!-- Threat Legend Mini Pill with Density Numbers -->
+    <div class="liquid-glass rounded-2xl p-2.5 max-w-[155px] shadow-2xl hidden md:flex flex-col gap-1.5 text-[10px]">
+      <div class="font-bold text-[#FFF8CF] flex items-center justify-between">
+        <span>Threat Index</span>
+        <span class="w-1.5 h-1.5 rounded-full bg-[#76C457] animate-ping"></span>
+      </div>
+      <div class="h-1.5 rounded-full w-full bg-gradient-to-r from-[#76C457] via-[#2A7C13] via-[#FFF8CF] via-[#FBE6C2] via-orange-500 to-rose-600 shadow"></div>
+      <div class="flex justify-between text-[9px] text-[#c4dcbe] font-mono font-bold">
+        <span>1</span>
+        <span>50+</span>
+        <span>250+</span>
+        <span class="text-rose-400">1k+</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ==========================================================================
+       DRAWER 1: SLIDE-OUT LIQUID GLASS FILTER DRAWER (CLOSED BY DEFAULT)
+       Opens only when user taps "Filters" pill
+       ========================================================================== -->
+  <aside id="drawer-filters" class="fixed top-0 left-0 bottom-0 w-full sm:w-96 liquid-glass z-[480] shadow-2xl flex flex-col -translate-x-[110%] drawer-spring">
+    
+    <!-- Drawer Header -->
+    <div class="p-5 border-b border-[#76C457]/20 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-[#2A7C13] border border-[#76C457]/50 flex items-center justify-center">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4 text-[#FFF8CF]"></i>
+        </div>
+        <div>
+          <h3 class="font-black text-sm text-[#FFF8CF] tracking-wide">Telemetry Filters</h3>
+          <p class="text-[10px] text-[#FBE6C2]">Refine Cautio incident radar</p>
+        </div>
+      </div>
+      <button onclick="closeDrawer('filters')" class="liquid-pill rounded-full p-1.5 text-[#FBE6C2] hover:text-white" title="Close Filters">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="p-5 overflow-y-auto space-y-4 text-xs flex-1">
+      
+      <!-- Search Input -->
+      <div>
+        <label class="block text-[11px] font-bold text-[#FBE6C2] uppercase tracking-wider mb-1.5">Search Telemetry</label>
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-[#76C457] absolute left-3 top-2.5"></i>
+          <input id="filter-search" type="text" placeholder="Plate (KA03), ID, Client, City, or 'accident'..." class="w-full bg-[#081408]/80 border border-[#76C457]/30 rounded-xl pl-9 pr-3 py-2 text-xs text-[#FFF8CF] placeholder-[#c4dcbe]/50 focus:outline-none focus:border-[#76C457] focus:ring-1 focus:ring-[#76C457] transition font-medium"/>
+        </div>
+      </div>
+
+      <!-- Today's Entries Quick Toggle Card -->
+      <div class="liquid-glass-card p-3 rounded-2xl flex items-center justify-between gap-3 border border-[#76C457]/40 bg-[#0e240e]/60">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-[#2A7C13]/70 border border-[#76C457]/60 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="calendar-check-2" class="w-4 h-4 text-[#FFF8CF]"></i>
+          </div>
+          <div>
+            <div class="text-xs font-black text-[#FFF8CF] flex items-center gap-1.5">
+              <span>Today's Entries Only</span>
+              <span id="drawer-today-count" class="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-[#2A7C13] text-[#FFF8CF] border border-[#76C457]">0</span>
+            </div>
+            <p class="text-[10px] text-[#c4dcbe]">Focus heatmap & logbook on today's reports</p>
+          </div>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input id="toggle-filter-today" type="checkbox" class="sr-only peer" onchange="toggleTodayFilter(this.checked)">
+          <div class="w-9 h-5 bg-[#081408] border border-[#76C457]/40 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#FFF8CF] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2A7C13] peer-checked:border-[#76C457]"></div>
+        </label>
+      </div>
+
+      <!-- Severity Quick Filter Buttons -->
+      <div>
+        <label class="block text-[11px] font-bold text-[#FBE6C2] uppercase tracking-wider mb-1.5">Severity Threat Filter</label>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button data-sev-pill="all" class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-left bg-[#2A7C13] text-[#FFF8CF] border border-[#76C457] ring-2 ring-[#76C457] transition shadow-sm">
+            All Severities
+          </button>
+          <button data-sev-pill="4" class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-left bg-rose-950/40 hover:bg-rose-950/70 text-rose-300 border border-rose-500/40 transition">
+            Crashes & Hits
+          </button>
+          <button data-sev-pill="3" class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-left bg-[#143314] hover:bg-[#1b401b] text-[#FBE6C2] border border-[#76C457]/30 transition">
+            Sensor Faults
+          </button>
+          <button data-sev-pill="2" class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-left bg-[#143314] hover:bg-[#1b401b] text-[#c4dcbe] border border-[#76C457]/30 transition">
+            Offline / SD
+          </button>
+        </div>
+      </div>
+
+      <!-- Corridor Selector -->
+      <div>
+        <label class="block text-[11px] font-bold text-[#FBE6C2] uppercase tracking-wider mb-1.5">Strategic Logistics Corridor</label>
+        <select id="filter-hotzone" class="w-full bg-[#081408]/90 border border-[#76C457]/30 rounded-xl px-3 py-2 text-xs text-[#FFF8CF] focus:outline-none focus:border-[#76C457] cursor-pointer font-semibold">
+          <option value="all">All Corridors & India Grid</option>
+          <option value="bangalore">Bangalore Logistics Belt (Karnataka)</option>
+          <option value="mumbai-pune">Mumbai-Pune Expressway Belt (Maharashtra)</option>
+          <option value="delhi-ncr">Delhi-NCR Logistics Gateway (Delhi/HR/UP)</option>
+          <option value="chennai-krishnagiri">Chennai-Krishnagiri Auto Belt (Tamil Nadu)</option>
+          <option value="hyderabad">Hyderabad Cyber & Logistics Belt (Telangana)</option>
+          <option value="kolkata">Kolkata & Eastern Logistics Hub (West Bengal)</option>
+          <option value="punjab-gt">Punjab-Haryana GT Road Corridor (PB/HR)</option>
+          <option value="gujarat">Gujarat Industrial Expressway (GJ)</option>
+          <option value="central-india">Central Logistics Grid (Nagpur-Raipur)</option>
+        </select>
+      </div>
+
+      <!-- Client Fleet Selector -->
+      <div>
+        <label class="block text-[11px] font-bold text-[#FBE6C2] uppercase tracking-wider mb-1.5">Client Operator Fleet</label>
+        <select id="filter-client" class="w-full bg-[#081408]/90 border border-[#76C457]/30 rounded-xl px-3 py-2 text-xs text-[#FFF8CF] focus:outline-none focus:border-[#76C457] cursor-pointer font-semibold">
+          <option value="all">All Fleets & Clients</option>
+        </select>
+      </div>
+
+      <!-- Subrequest Selector -->
+      <div>
+        <label class="block text-[11px] font-bold text-[#FBE6C2] uppercase tracking-wider mb-1.5">Issue Classification</label>
+        <select id="filter-subrequest" class="w-full bg-[#081408]/90 border border-[#76C457]/30 rounded-xl px-3 py-2 text-xs text-[#FFF8CF] focus:outline-none focus:border-[#76C457] cursor-pointer font-semibold">
+          <option value="all">All Issue Categories</option>
+        </select>
+      </div>
+
+      <!-- Resolution Status -->
+      <div>
+        <label class="block text-[11px] font-bold text-[#FBE6C2] uppercase tracking-wider mb-1.5">Resolution SLA Status</label>
+        <select id="filter-resolved" class="w-full bg-[#081408]/90 border border-[#76C457]/30 rounded-xl px-3 py-2 text-xs text-[#FFF8CF] focus:outline-none focus:border-[#76C457] cursor-pointer font-semibold">
+          <option value="all">All Status</option>
+          <option value="Yes">Resolved</option>
+          <option value="No">Pending Action</option>
+        </select>
+      </div>
+
+      <!-- Heatmap Optics Sliders -->
+      <div class="pt-3 border-t border-[#76C457]/20 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-extrabold text-[#FBE6C2] uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="layers" class="w-3.5 h-3.5 text-[#76C457]"></i>
+            <span>Heatmap Optics</span>
+          </span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input id="heat-mode-toggle" type="checkbox" checked class="sr-only peer">
+            <div class="w-8 h-4 bg-[#081408] border border-[#76C457]/40 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#FFF8CF] after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#2A7C13]"></div>
+          </label>
+        </div>
+        <div class="text-[11px] text-[#c4dcbe] flex items-center justify-between">
+          <span>Mode:</span>
+          <span id="heat-mode-label" class="font-extrabold text-[#76C457]">Risk-Weighted (Accidents 5x)</span>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-[10px] text-[#c4dcbe] mb-1">
+            <span>Radius:</span>
+            <span id="val-heat-radius" class="font-mono text-[#76C457] font-bold">32px</span>
+          </div>
+          <input id="slider-heat-radius" type="range" min="15" max="55" value="32" class="w-full h-1.5 bg-[#081408] rounded-lg appearance-none cursor-pointer accent-[#76C457]">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-[10px] text-[#c4dcbe] mb-1">
+            <span>Blur:</span>
+            <span id="val-heat-blur" class="font-mono text-[#76C457] font-bold">22px</span>
+          </div>
+          <input id="slider-heat-blur" type="range" min="10" max="45" value="22" class="w-full h-1.5 bg-[#081408] rounded-lg appearance-none cursor-pointer accent-[#76C457]">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-[10px] text-[#c4dcbe] mb-1">
+            <span>Opacity:</span>
+            <span id="val-heat-opacity" class="font-mono text-[#76C457] font-bold">50%</span>
+          </div>
+          <input id="slider-heat-opacity" type="range" min="15" max="90" value="50" class="w-full h-1.5 bg-[#081408] rounded-lg appearance-none cursor-pointer accent-[#76C457]">
+        </div>
+      </div>
+
+      <!-- Basemap Clean Switcher -->
+      <div class="pt-3 border-t border-[#76C457]/20">
+        <label class="block text-[11px] font-bold text-[#FBE6C2] uppercase tracking-wider mb-1.5">Clean Basemap</label>
+        <select id="select-basemap" class="w-full bg-[#081408]/90 border border-[#76C457]/30 rounded-xl px-3 py-2 text-xs text-[#FFF8CF] focus:outline-none focus:border-[#76C457] cursor-pointer font-semibold">
+          <option value="esri_streets" selected>Esri High-Definition Streets</option>
+          <option value="esri_satellite">Esri High-Resolution Satellite</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="p-4 border-t border-[#76C457]/20 flex items-center gap-2 bg-[#081408]/40">
+      <button id="btn-clear-filters" class="flex-1 py-2.5 bg-[#143314] hover:bg-[#1b401b] text-[#FFF8CF] rounded-xl text-xs font-bold border border-[#76C457]/40 transition flex items-center justify-center gap-1.5 active:scale-95 shadow">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-[#76C457]"></i>
+        <span>Reset Filters</span>
+      </button>
+      <button onclick="closeDrawer('filters')" class="px-5 py-2.5 bg-gradient-to-r from-[#2A7C13] to-[#76C457] hover:brightness-110 text-[#FFF8CF] font-extrabold rounded-xl text-xs transition active:scale-95 shadow border border-[#76C457]/60">
+        Apply & View
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ==========================================================================
+       DRAWER 2: SLIDE-OUT LIQUID GLASS INSIGHTS & ANALYTICS (CLOSED BY DEFAULT)
+       Opens only when user taps "Insights & KPIs" pill
+       ========================================================================== -->
+  <aside id="drawer-insights" class="fixed top-0 right-0 bottom-0 w-full sm:w-[540px] lg:w-[620px] liquid-glass z-[480] shadow-2xl flex flex-col translate-x-[110%] drawer-spring">
+    
+    <!-- Drawer Header -->
+    <div class="p-5 border-b border-[#76C457]/20 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-[#2A7C13] border border-[#76C457]/50 flex items-center justify-center">
+          <i data-lucide="bar-chart-3" class="w-4 h-4 text-[#FFF8CF]"></i>
+        </div>
+        <div>
+          <h3 class="font-black text-sm text-[#FFF8CF] tracking-wide">Fleet Insights & Risk Scorecards</h3>
+          <p class="text-[10px] text-[#FBE6C2]">Commercial telematics & ADAS incident radar</p>
+        </div>
+      </div>
+      <button onclick="closeDrawer('insights')" class="liquid-pill rounded-full p-1.5 text-[#FBE6C2] hover:text-white" title="Close Insights">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="p-5 overflow-y-auto space-y-5 text-xs flex-1">
+      
+      <!-- 6 EXECUTIVE SCORECARDS IN GLASS CARDS -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        
+        <!-- Total Incidents -->
+        <div class="liquid-glass-card p-3 rounded-2xl relative overflow-hidden">
+          <div class="flex items-center justify-between text-[#c4dcbe] mb-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-[#FBE6C2]">Total Events</span>
+            <i data-lucide="database" class="w-3.5 h-3.5 text-[#76C457]"></i>
+          </div>
+          <div id="kpi-total-incidents" class="text-xl font-black text-[#FFF8CF]">12,542</div>
+          <div id="kpi-total-subtext" class="text-[9px] text-[#c4dcbe] truncate mt-0.5">Full Fleet Telemetry</div>
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#2A7C13] to-[#76C457]"></div>
+        </div>
+
+        <!-- Critical Accidents -->
+        <div class="liquid-glass-card p-3 rounded-2xl relative overflow-hidden border-rose-500/40">
+          <div class="flex items-center justify-between text-rose-300 mb-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-rose-300">Crashes & Hits</span>
+            <i data-lucide="flame" class="w-3.5 h-3.5 text-rose-400 animate-pulse"></i>
+          </div>
+          <div id="kpi-critical-accidents" class="text-xl font-black text-rose-300">865</div>
+          <div class="text-[9px] text-rose-300/80 truncate mt-0.5">Severe Impact</div>
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-rose-600 to-rose-400"></div>
+        </div>
+
+        <!-- Active Hotzones -->
+        <div class="liquid-glass-card p-3 rounded-2xl relative overflow-hidden">
+          <div class="flex items-center justify-between text-[#c4dcbe] mb-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-[#FBE6C2]">Hotzones</span>
+            <i data-lucide="crosshair" class="w-3.5 h-3.5 text-[#76C457]"></i>
+          </div>
+          <div id="kpi-active-hotzones" class="text-xl font-black text-[#FFF8CF]">9</div>
+          <div class="text-[9px] text-[#c4dcbe] truncate mt-0.5">Active Corridors</div>
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#2A7C13] to-[#FBE6C2]"></div>
+        </div>
+
+        <!-- Vehicles Tracked -->
+        <div class="liquid-glass-card p-3 rounded-2xl relative overflow-hidden">
+          <div class="flex items-center justify-between text-[#c4dcbe] mb-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-[#FBE6C2]">Vehicles</span>
+            <i data-lucide="truck" class="w-3.5 h-3.5 text-[#76C457]"></i>
+          </div>
+          <div id="kpi-vehicles-impacted" class="text-xl font-black text-[#FFF8CF]">5,948</div>
+          <div class="text-[9px] text-[#c4dcbe] truncate mt-0.5">Commercial Units</div>
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#2A7C13] to-[#76C457]"></div>
+        </div>
+
+        <!-- Resolution Rate -->
+        <div class="liquid-glass-card p-3 rounded-2xl relative overflow-hidden">
+          <div class="flex items-center justify-between text-[#c4dcbe] mb-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-[#76C457]">SLA Resolution</span>
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-[#76C457]"></i>
+          </div>
+          <div id="kpi-resolution-rate" class="text-xl font-black text-[#76C457]">85.2%</div>
+          <div class="text-[9px] text-[#c4dcbe] truncate mt-0.5">Closed Tickets</div>
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#2A7C13] to-[#76C457]"></div>
+        </div>
+
+        <!-- Client Fleets -->
+        <div class="liquid-glass-card p-3 rounded-2xl relative overflow-hidden">
+          <div class="flex items-center justify-between text-[#c4dcbe] mb-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-[#FBE6C2]">Fleets</span>
+            <i data-lucide="building-2" class="w-3.5 h-3.5 text-[#76C457]"></i>
+          </div>
+          <div id="kpi-active-clients" class="text-xl font-black text-[#FFF8CF]">432</div>
+          <div class="text-[9px] text-[#c4dcbe] truncate mt-0.5">Accounts Monitored</div>
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#2A7C13] to-[#FBE6C2]"></div>
+        </div>
+
+      </div>
+
+      <!-- CHART 1: Top Hotzones Bar Chart -->
+      <div class="liquid-glass-card p-4 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-black text-[#FFF8CF] flex items-center gap-1.5">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-[#76C457]"></i>
+            <span>Logistics Corridors by Incident Load</span>
+          </h4>
+          <span class="text-[10px] text-[#FBE6C2]">Corridor Load</span>
+        </div>
+        <div class="h-48 relative">
+          <canvas id="chart-hotzones"></canvas>
+        </div>
+      </div>
+
+      <!-- CHART 2: Sub-request Categories Doughnut -->
+      <div class="liquid-glass-card p-4 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-black text-[#FFF8CF] flex items-center gap-1.5">
+            <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-[#76C457]"></i>
+            <span>Issue Classification & Categories</span>
+          </h4>
+          <span class="text-[10px] text-[#FBE6C2]">Distribution</span>
+        </div>
+        <div class="h-48 relative">
+          <canvas id="chart-categories"></canvas>
+        </div>
+      </div>
+
+      <!-- CHART 3: Incident Velocity Timeline -->
+      <div class="liquid-glass-card p-4 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-black text-[#FFF8CF] flex items-center gap-1.5">
+            <i data-lucide="trending-up" class="w-3.5 h-3.5 text-[#76C457]"></i>
+            <span>Monthly Incident Velocity Trajectory</span>
+          </h4>
+          <span class="text-[10px] text-[#FBE6C2]">Velocity</span>
+        </div>
+        <div class="h-44 relative">
+          <canvas id="chart-timeline"></canvas>
+        </div>
+      </div>
+
+      <!-- CHART 4: Commercial Operator Fleets -->
+      <div class="liquid-glass-card p-4 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-black text-[#FFF8CF] flex items-center gap-1.5">
+            <i data-lucide="building" class="w-3.5 h-3.5 text-[#76C457]"></i>
+            <span>Top Commercial Fleets by Incident Volume</span>
+          </h4>
+          <span class="text-[10px] text-[#FBE6C2]">Operator Risk</span>
+        </div>
+        <div class="h-48 relative">
+          <canvas id="chart-clients"></canvas>
+        </div>
+      </div>
+
+      <!-- CHART 5: Resolution Efficiency & TAT -->
+      <div class="liquid-glass-card p-4 rounded-2xl flex items-center justify-between gap-4">
+        <div class="space-y-1.5 flex-1">
+          <h4 class="text-xs font-black text-[#FFF8CF] flex items-center gap-1.5">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#76C457]"></i>
+            <span>Resolution & Field Efficiency</span>
+          </h4>
+          <p class="text-[10px] text-[#c4dcbe] leading-relaxed">
+            Over 85% of telemetry drops, camera hanging, and offline issues are resolved within SLA windows.
+          </p>
+          <div class="flex items-center gap-2 pt-1 text-[10px]">
+            <span class="px-2 py-0.5 rounded bg-[#081408] text-[#FFF8CF] font-bold border border-[#76C457]/20">Avg TAT: 2.4 Days</span>
+            <span class="px-2 py-0.5 rounded bg-[#081408] text-[#76C457] font-bold border border-[#76C457]/20">OTA Fix: 64%</span>
+          </div>
+        </div>
+        <div class="w-28 h-28 relative flex-shrink-0">
+          <canvas id="chart-resolution"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="p-4 border-t border-[#76C457]/20 flex items-center justify-between bg-[#081408]/40">
+      <span class="text-[11px] text-[#c4dcbe]">Google Sheet Stream Active</span>
+      <button onclick="closeDrawer('insights')" class="px-5 py-2 bg-gradient-to-r from-[#2A7C13] to-[#76C457] hover:brightness-110 text-[#FFF8CF] font-extrabold rounded-xl text-xs transition active:scale-95 shadow border border-[#76C457]/60">
+        Back to Map
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ==========================================================================
+       DRAWER 3: SLIDE-UP LIQUID GLASS INCIDENT LOGBOOK (CLOSED BY DEFAULT)
+       Opens only when user taps "Logbook" pill
+       ========================================================================== -->
+  <aside id="drawer-logbook" class="fixed inset-x-3 bottom-3 top-20 liquid-glass rounded-3xl z-[480] shadow-2xl flex flex-col translate-y-[110%] drawer-spring overflow-hidden border-2 border-[#76C457]/40">
+    
+    <!-- Drawer Header -->
+    <div class="p-4 sm:p-5 border-b border-[#76C457]/20 flex items-center justify-between bg-[#081408]/50">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-[#2A7C13] border border-[#76C457]/50 flex items-center justify-center">
+          <i data-lucide="table-2" class="w-4 h-4 text-[#FFF8CF]"></i>
+        </div>
+        <div>
+          <h3 class="font-black text-sm text-[#FFF8CF] tracking-wide">Cautio Incident & Telemetry Logbook</h3>
+          <p class="text-[10px] text-[#FBE6C2]">Searchable field ticket catalog with instant map pin pointing</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <span id="table-page-info" class="text-xs text-[#FBE6C2] font-bold">Loading...</span>
+        <div class="flex items-center gap-1.5">
+          <button id="table-prev-btn" class="liquid-pill px-3 py-1.5 rounded-xl text-xs font-bold text-[#FFF8CF] disabled:opacity-30">
+            ← Prev
+          </button>
+          <button id="table-next-btn" class="liquid-pill px-3 py-1.5 rounded-xl text-xs font-bold text-[#FFF8CF] disabled:opacity-30">
+            Next →
+          </button>
+        </div>
+        <button onclick="closeDrawer('logbook')" class="liquid-pill rounded-full p-2 text-[#FBE6C2] hover:text-white ml-2" title="Close Logbook">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="flex-1 overflow-auto bg-[#081408]/30">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-[#081408]/80 sticky top-0 z-10 border-b border-[#76C457]/30 text-[#FBE6C2] text-[11px] font-extrabold uppercase tracking-wider backdrop-blur-md">
+            <th class="py-3 px-4">Ticket ID</th>
+            <th class="py-3 px-4">Vehicle Plate</th>
+            <th class="py-3 px-4">Client Fleet</th>
+            <th class="py-3 px-4">Location / Zone</th>
+            <th class="py-3 px-4">Severity</th>
+            <th class="py-3 px-4">Issue Classification</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="table-body" class="divide-y divide-[#76C457]/15 text-xs">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="p-3 bg-[#081408]/60 border-t border-[#76C457]/20 flex items-center justify-between text-xs text-[#c4dcbe]">
+      <span>Click <strong>Locate</strong> to fly directly to incident on the map</span>
+      <button onclick="closeDrawer('logbook')" class="px-5 py-2 bg-gradient-to-r from-[#2A7C13] to-[#76C457] hover:brightness-110 text-[#FFF8CF] font-extrabold rounded-xl text-xs transition active:scale-95 shadow border border-[#76C457]/60">
+        Close Logbook & Return to Map
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ==========================================================================
+       FORENSIC INCIDENT DETAIL MODAL (ALWAYS ON TOP, Z-[999999])
+       ========================================================================== -->
+  <!-- ==========================================================================
+       FORENSIC INCIDENT DETAIL MODAL (APPLE LIQUID GLASS VISIONOS INSPECTOR)
+       ========================================================================== -->
+  <div id="incident-modal" class="hidden fixed inset-0 flex items-center justify-center p-3 sm:p-6 liquid-modal-backdrop" style="z-index: 999999 !important;">
+    <div id="incident-modal-card" class="liquid-modal-window w-full max-w-3xl rounded-[28px] overflow-hidden flex flex-col max-h-[92vh] text-[#FFF8CF] relative shadow-2xl" style="z-index: 1000000 !important;">
+      
+      <!-- VisionOS Specular Sheen Highlight Line -->
+      <div class="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-[#FFF8CF]/60 to-transparent pointer-events-none"></div>
+
+      <!-- Modal Header (Frosted Glass Island) -->
+      <div class="px-5 py-4 sm:px-6 sm:py-4.5 border-b border-[#76C457]/20 flex items-center justify-between bg-[#081408]/30 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+          <div class="h-9 px-3 rounded-xl bg-[#0e230e]/80 border border-[#76C457]/50 flex items-center justify-center shadow-lg shadow-[#2A7C13]/30">
+            <img src="cautio-logo.svg" alt="Cautio" class="h-4 sm:h-4.5 w-auto object-contain" />
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="modal-issue-id" class="font-mono text-xs sm:text-sm font-black text-[#FFF8CF] bg-[#2A7C13]/90 px-2.5 py-0.5 rounded-lg border border-[#76C457]/60 tracking-wider">ISS00000</span>
+              <span id="modal-severity-badge" class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-rose-950/80 text-rose-300 border border-rose-500/50">Critical Accident</span>
+              <span id="modal-status-badge" class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-[#2A7C13]/60 text-[#76C457] border border-[#76C457]">Resolved</span>
+            </div>
+            <p class="text-[10px] text-[#FBE6C2] font-semibold mt-0.5 tracking-wide">
+              Vehicle Telematics & Forensic Intelligence Record
+            </p>
+          </div>
+        </div>
+        <button id="modal-close-btn" onclick="closeModal()" class="liquid-pill rounded-full w-8 h-8 flex items-center justify-center text-[#FBE6C2] hover:text-white transition group" title="Close Inspector">
+          <i data-lucide="x" class="w-4 h-4 group-hover:scale-110 transition-transform"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Bento Grid Architecture) -->
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-3.5 text-xs">
+        
+        <!-- BENTO TILE 1: Vehicle & Fleet Hero Card -->
+        <div class="liquid-bento-tile p-4">
+          <div class="flex items-center justify-between pb-3 border-b border-[#76C457]/15 mb-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-[#2A7C13]/70 border border-[#76C457]/50 flex items-center justify-center text-[#FFF8CF] shadow">
+                <i data-lucide="truck" class="w-4 h-4 text-[#FFF8CF]"></i>
+              </div>
+              <div>
+                <span class="text-[9px] uppercase tracking-wider font-extrabold text-[#c4dcbe] block">Commercial Asset Plate</span>
+                <span id="modal-vehicle" class="font-mono text-base sm:text-lg font-black text-[#FFF8CF] tracking-wide">--</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-[9px] uppercase tracking-wider font-extrabold text-[#c4dcbe] block">Fleet Operator</span>
+              <span id="modal-client" class="text-xs sm:text-sm font-black text-[#FBE6C2]">--</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
+            <div class="liquid-field-well p-2.5">
+              <span class="text-[9px] text-[#c4dcbe] uppercase font-bold tracking-wider block mb-0.5">Location / Hub</span>
+              <span id="modal-location" class="font-bold text-[#76C457] truncate block">--</span>
+            </div>
+            <div class="liquid-field-well p-2.5">
+              <span class="text-[9px] text-[#c4dcbe] uppercase font-bold tracking-wider block mb-0.5">Reported Timestamp</span>
+              <span id="modal-raised-at" class="font-medium text-[#FFF8CF] truncate block">--</span>
+            </div>
+            <div class="liquid-field-well p-2.5">
+              <span class="text-[9px] text-[#c4dcbe] uppercase font-bold tracking-wider block mb-0.5">Resolution Timestamp</span>
+              <span id="modal-resolved-at" class="font-medium text-[#FFF8CF] truncate block">--</span>
+            </div>
+            <div class="liquid-field-well p-2.5">
+              <span class="text-[9px] text-[#c4dcbe] uppercase font-bold tracking-wider block mb-0.5">Assigned Specialist</span>
+              <span id="modal-assigned-to" class="font-bold text-[#FBE6C2] truncate block">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- BENTO TILE 2: Two-Column Incident Diagnostics & Field Notes -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          
+          <!-- Diagnostics Column -->
+          <div class="liquid-bento-tile p-4 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#76C457] flex items-center gap-1.5">
+                <i data-lucide="activity" class="w-3.5 h-3.5 text-[#76C457]"></i>
+                <span>Incident Classification</span>
+              </span>
+              <span id="modal-subrequest" class="px-2 py-0.5 rounded-lg bg-[#2A7C13]/60 text-[#FBE6C2] border border-[#76C457]/40 text-[10px] font-bold">--</span>
+            </div>
+            <div class="liquid-field-well p-3 text-xs text-[#FFF8CF] leading-relaxed flex-1 overflow-y-auto max-h-36" id="modal-details">
+              --
+            </div>
+          </div>
+
+          <!-- Field Notes Column -->
+          <div class="liquid-bento-tile p-4 flex flex-col">
+            <div class="flex items-center gap-1.5 mb-2">
+              <i data-lucide="file-text" class="w-3.5 h-3.5 text-[#76C457]"></i>
+              <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#76C457]">Field Observations</span>
+            </div>
+            <div class="liquid-field-well p-3 text-xs text-[#c4dcbe] leading-relaxed flex-1 overflow-y-auto max-h-36" id="modal-remarks">
+              --
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BENTO TILE 3: Corrective Resolution & Lifecycle Status -->
+        <div class="liquid-bento-tile p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#76C457] flex items-center gap-1.5">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#76C457]"></i>
+              <span>Resolution & Corrective Action Taken</span>
+            </span>
+          </div>
+          <div class="liquid-field-well p-3 text-xs text-[#FFF8CF] font-medium leading-relaxed" id="modal-correction">
+            --
+          </div>
+        </div>
+
+        <!-- BENTO TILE 4: Telemetry Coordinates Bar -->
+        <div class="liquid-bento-tile px-4 py-2.5 flex items-center justify-between text-[11px]">
+          <div class="flex items-center gap-2 text-[#c4dcbe]">
+            <i data-lucide="compass" class="w-3.5 h-3.5 text-[#76C457]"></i>
+            <span>Geocoded GPS: <span id="modal-coords" class="font-mono text-[#76C457] font-bold"></span></span>
+          </div>
+          <span class="text-[10px] font-semibold text-[#FBE6C2]/80">Cautio Surveillance Engine</span>
+        </div>
+
+      </div>
+
+      <!-- VisionOS Glass Dock Footer -->
+      <div class="px-5 py-3.5 sm:px-6 bg-[#081408]/40 border-t border-[#76C457]/20 flex items-center justify-between backdrop-blur-md">
+        <div class="flex items-center gap-2">
+          <button id="modal-locate-btn" onclick="locateCurrentModalIncident()" class="px-3.5 py-1.5 liquid-pill rounded-xl text-xs font-bold text-[#FFF8CF] flex items-center gap-1.5 hover:scale-102 transition" title="Focus map on this incident">
+            <i data-lucide="crosshair" class="w-3.5 h-3.5 text-[#76C457]"></i>
+            <span>Locate on Map</span>
+          </button>
+          <a id="modal-sheet-link" href="#" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 liquid-pill rounded-xl text-xs font-bold text-[#FBE6C2] flex items-center gap-1.5 hover:scale-102 transition" title="Open Google Sheet row">
+            <i data-lucide="external-link" class="w-3.5 h-3.5 text-[#76C457]"></i>
+            <span class="hidden sm:inline">Google Sheet</span>
+          </a>
+        </div>
+        <button onclick="closeModal()" class="px-5 py-2 bg-gradient-to-r from-[#2A7C13] to-[#76C457] hover:brightness-110 text-[#FFF8CF] font-black rounded-xl text-xs transition shadow-lg shadow-[#2A7C13]/40 active:scale-95 border border-[#76C457]/60">
+          Close Inspector
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-[99999] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet Heat Plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <!-- Leaflet MarkerCluster Plugin -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Prebaked Incident Data Snapshot (Zero Initial Latency) -->
+  <script src="data-snapshot.js"></script>
+
+  <!-- Official India Geographic Boundary (Zero Latency) -->
+  <script src="india-boundary.js"></script>
+
+  <!-- Main Application Engine -->
+  <script src="app.js"></script>
+
+</body>
+</html>

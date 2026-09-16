@@ -1,0 +1,20 @@
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node & Package Managers
+node_modules/
+npm-debug.log
+
+# Temporary test & setup scripts
+*.tmp
+*.log
+check_admin.ps1
+find_tools.ps1
+install_portable_git.ps1
+setup_git.ps1
+check_git_auth.ps1
+check_map_css.ps1
+scratch_*.ps1
