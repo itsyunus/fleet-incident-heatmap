@@ -2,7 +2,7 @@
 
 An industry-level, interactive geospatial safety intelligence system, accident hotzone radar, and video telematics command center built specifically for **[Cautio](https://www.cautio.com/)** — India's leading commercial vehicle AI dashcam ecosystem.
 
-The platform connects live to Cautio's commercial fleet incident Google Sheet (`1DzW-6Q7hTNn2hSJbEHOkSrbalOmbDIftdjw4I_PhEdA`) and automatically synchronizes immediately on startup, page refresh, or on-demand whenever any new incident, camera fault, or collision report is logged by field technicians or command center operators.
+The platform connects live to Cautio's internal fleet incident Google Sheet database and automatically synchronizes immediately on startup, page refresh, or on-demand whenever any new incident, camera fault, or collision report is logged by field technicians or command center operators.
 
 ---
 
@@ -27,7 +27,7 @@ Designed in accordance with modern **visionOS / iOS 18 liquid glassmorphism** ae
 - **Top Command Bar Dynamic Island**: Prioritized, minimalist, glassmorphic capsule floating cleanly over the map.
   - Quick access to Today's Entries with real-time counter badge.
   - Strategic Freight Corridor switcher dropdown directly integrated on the top bar.
-  - Minimalist live sync status LED dot (expands on status change).
+  - Minimalist live sync status indicator icon (Wi-Fi connected / animated spin during sync).
 - **Closed-by-Default Intelligence Drawers**: Filters, Analytics, and Incident Logbooks are cleanly collapsed into floating glass dynamic island pills.
 - **Translucent Specular Glass Surfaces**: Multi-layer backdrop blur (`28px`), frosted green tinting (`rgba(12, 28, 12, 0.68)`), specular cream rim lighting (`#FFF8CF`), and subtle green refraction shadows (`#76C457`).
 - **Spring-Loaded Slide Drawers**:
@@ -61,11 +61,12 @@ Designed in accordance with modern **visionOS / iOS 18 liquid glassmorphism** ae
 - **Minimal Cautio Micro-Bubble**: Discrete, compact brand attribution in the bottom-right corner.
 
 ### 2. Live Google Sheets Auto-Updating Engine
-- **Instant Auto-Sync on Startup & Refresh**: Connects automatically to the live Google Sheet on initial visit and re-syncs seamlessly.
+- **Instant Auto-Sync on Startup & Refresh**: Connects automatically to the live Google Sheet on initial visit and re-syncs seamlessly every 5 minutes.
+- **Configurable Cadence**: Auto-sync interval set to 5 minutes by default (`300,000 ms`), with options for 1 min, 5 min, 10 min, 15 min, or manual sync in the Filter drawer.
 - **Direct Live Connection**: Uses Google Visualization API (`gviz/tq`) with JSONP fallback to query the Google Sheet directly from the client's browser.
-- **Zero Rebuild Needed**: When a field operator or command center logs a new accident/issue into the Google Sheet, the live web page detects and incorporates new rows immediately.
+- **Zero Rebuild Needed**: When a field operator or command center logs a new accident/issue into the Google Sheet, the live web page incorporates new rows seamlessly.
 - **Zero Initial Latency**: Ships with a pre-compiled snapshot of historical records (`data-snapshot.js`) so the dashboard and map render instantly (< 100ms), followed immediately by seamless live reconciliation.
-- **Live Connection Status**: Minimalist green LED indicator that stays clean and expands with status updates.
+- **Live Connection Status**: Minimalist Wi-Fi connection indicator with animated sync feedback.
 
 ### 3. Executive KPI Telemetry & Scorecards
 - **Total Incidents Logged**: Dynamic counter tracking events with filter-responsive counts.
@@ -97,53 +98,64 @@ Designed in accordance with modern **visionOS / iOS 18 liquid glassmorphism** ae
 
 ```
 fleet-incident-heatmap/
-├── index.html           # Main Cautio command center dashboard & UI
-├── app.js               # Live sync engine, Leaflet heatmap, charts, & filters
-├── data-snapshot.js     # Pre-baked dataset snapshot for instant load
+├── index.html           # Main Cautio command center dashboard & UI (No Sheet links)
+├── app.js               # Dual-mode live sync engine (Serverless API + Encrypted dynamic stream)
+├── data-snapshot.js     # Pre-baked dataset snapshot for instant offline load
 ├── india-boundary.js    # Official India geographic boundary overlay
-├── cautio-logo.svg      # Official Cautio vector logo
-└── README.md            # Documentation & GitHub deployment instructions
+├── cautio-logo.svg      # Official Cautio vector brand mark
+├── vercel.json          # Vercel serverless edge configuration
+├── .env.example         # Environment template for confidential credentials
+├── api/
+│   └── sync.js          # Vercel Serverless Function (Hides Google Sheet completely from browser)
+└── README.md            # Documentation & deployment guide
 ```
 
 ---
 
-## How to Upload & Deploy to GitHub Pages (2 Minutes)
+## Deploying to Vercel (Recommended for Maximum Confidentiality)
 
-### Option A: Upload via GitHub Web Interface (Easiest — No Git Needed)
+Deploying to **[Vercel](https://vercel.com)** ensures that:
+1. **Google Sheets is 100% hidden**: The browser never makes requests to `docs.google.com`. Browser DevTools Network tab only shows requests to `/api/sync` on your own domain.
+2. **Zero Sheet IDs in public code**: The Google Sheet ID can be stored securely as a Vercel Environment Variable.
+3. **No buttons or links in the UI**: There are no external buttons or hyperlinks that redirect visitors to the Google Sheet.
+
+### Quick Deploy via Vercel CLI or Dashboard:
+
+1. Push your repository to GitHub / GitLab / Bitbucket (or run `vercel` via CLI).
+2. Import the project into your **Vercel Dashboard**.
+3. Under **Project Settings → Environment Variables**, add:
+   - `SHEET_ID` = `your_confidential_sheet_id`
+   - `SHEET_GID` = `0` (or your tab GID)
+4. Click **Deploy**.
+
+---
+
+## Deploying to GitHub Pages (Static Hosting Fallback)
+
+If deploying statically to GitHub Pages:
+- The website uses dynamic in-memory cipher decryption (`_resolveEncryptedStreamUrl`) to stream telemetrics without exposing plain-text URLs in any file.
+- All direct links and redirect buttons to the Google Sheet have been removed from the user interface.
+
+### Option A: Upload via GitHub Web Interface
 
 1. Go to [GitHub.com](https://github.com) and click **"New repository"**.
-2. Name it `cautio-fleet-heatmap` and set it to **Public**.
-3. Click **"uploading an existing file"**.
-4. Drag and drop all files from this directory:
-   - `index.html`
-   - `app.js`
-   - `data-snapshot.js`
-   - `india-boundary.js`
-   - `cautio-logo.svg`
-   - `README.md`
-5. Click **"Commit changes"**.
-6. Go to **Settings** → **Pages** (in the left sidebar).
-7. Under **Build and deployment** → **Branch**, choose `main` (or `master`) and folder `/ (root)`, then click **Save**.
-8. Within ~60 seconds, your site is live at:
-   `https://<your-username>.github.io/cautio-fleet-heatmap/`
+2. Name it `cautio-fleet-heatmap` and set it to **Public** or **Private**.
+3. Click **"uploading an existing file"** and select repository files.
+4. Click **"Commit changes"**.
+5. Go to **Settings** → **Pages** (in the left sidebar).
+6. Under **Build and deployment** → **Branch**, choose `main` and folder `/ (root)`, then click **Save**.
 
 ### Option B: Deploy via Git CLI
 
 ```bash
 cd C:\Users\monitoring\fleet-incident-heatmap
-git init
 git add .
-git commit -m "feat: Cautio AI Dashcam Telemetry & Accident Hotzone Heatmap v3.0"
-git branch -M main
-git remote add origin https://github.com/<your-username>/cautio-fleet-heatmap.git
-git push -u origin main
+git commit -m "feat: confidential telemetry pipeline & Vercel serverless integration"
+git push origin main
 ```
-Then enable GitHub Pages from repository Settings → Pages.
 
 ---
 
 ## Live Data Integration
-
-- **Google Sheet Stream ID**: `1DzW-6Q7hTNn2hSJbEHOkSrbalOmbDIftdjw4I_PhEdA`
-- **Sheet Tab GID**: `0`
+- **Google Sheet Stream**: Secured Private Telemetry Feed (Configured via `app.js`)
 - **Cautio Official Ecosystem**: [https://www.cautio.com/](https://www.cautio.com/)

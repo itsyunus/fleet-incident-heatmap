@@ -18,3 +18,11 @@ setup_git.ps1
 check_git_auth.ps1
 check_map_css.ps1
 scratch_*.ps1
+server.ps1
+logo_*.png
+
+# Environment Secrets & Vercel
+.env
+.env.local
+.env.*.local
+.vercel/

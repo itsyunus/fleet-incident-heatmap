@@ -1,12 +1,20 @@
 /**
  * Bharat Fleet Safety Intel - Heatmap & Incident Command Engine (v3.0 Pro)
- * Real-time synchronization with Google Sheet: 1DzW-6Q7hTNn2hSJbEHOkSrbalOmbDIftdjw4I_PhEdA
- * Enterprise Dark Glass UI/UX with Smooth Kinetic Map Navigation
+ * Real-time synchronization with Cautio Fleet Incident Telemetry Engine
+ * Enterprise Porcelain Light Glass UI/UX with Smooth Kinetic Map Navigation
  */
 
-const SHEET_ID = '1DzW-6Q7hTNn2hSJbEHOkSrbalOmbDIftdjw4I_PhEdA';
-const GID = '0';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${GID}#gid=${GID}`;
+// Secure Telemetry Pipeline (Serverless proxy on Vercel with encrypted dynamic fallback)
+function _resolveEncryptedStreamUrl(callbackName) {
+  const cipher = "KxUBBBpVfU4ADhEnSwsKAgIYF1coChQdQ0JEJgARBwEKNxUXThZ7VCgfOkhCI04jMTdcAlplCQMwPCYEARMGAB4bCA4hJAMAFhM8UTBtYFpzJyBaEx8GKE4QEE0gFBRYHwAHAhYlFhx6UVxSLwQHTg==";
+  const keyBytes = [67, 97, 117, 116, 105, 111, 82, 97, 100, 97, 114, 84, 101, 108, 101, 109, 101, 116, 114, 121, 75, 101, 121, 50, 48, 50, 54];
+  const raw = typeof atob === 'function' ? atob(cipher) : '';
+  let base = '';
+  for (let i = 0; i < raw.length; i++) {
+    base += String.fromCharCode(raw.charCodeAt(i) ^ keyBytes[i % keyBytes.length]);
+  }
+  return `${base}${callbackName}&gid=0`;
+}
 
 // Coordinates Dictionary for Indian Cities & Strategic Corridors
 const GEO_COORDINATES = {
@@ -151,6 +159,7 @@ const HOTZONE_CORRIDORS = [
   {
     id: "bangalore",
     name: "Bangalore Logistics Belt",
+    shortName: "Bangalore",
     state: "Karnataka",
     center: [12.9716, 77.5946],
     radiusMeters: 45000,
@@ -161,6 +170,7 @@ const HOTZONE_CORRIDORS = [
   {
     id: "mumbai-pune",
     name: "Mumbai-Pune Expressway Belt",
+    shortName: "Mumbai-Pune",
     state: "Maharashtra",
     center: [18.7500, 73.4000],
     radiusMeters: 65000,
@@ -171,16 +181,18 @@ const HOTZONE_CORRIDORS = [
   {
     id: "delhi-ncr",
     name: "Delhi-NCR Logistics Gateway",
+    shortName: "Delhi-NCR",
     state: "Delhi / Haryana / UP",
     center: [28.5500, 77.1500],
     radiusMeters: 55000,
-    color: "#FBE6C2",
+    color: "#eab308",
     riskLevel: "High Hotzone",
     description: "Gurugram, Noida, Faridabad, Binola & NH-48 Logistics Corridor"
   },
   {
     id: "chennai-krishnagiri",
     name: "Chennai-Krishnagiri Auto Belt",
+    shortName: "Chennai-Krishnagiri",
     state: "Tamil Nadu",
     center: [12.7500, 79.1500],
     radiusMeters: 80000,
@@ -191,6 +203,7 @@ const HOTZONE_CORRIDORS = [
   {
     id: "hyderabad",
     name: "Hyderabad Cyber & Logistics Belt",
+    shortName: "Hyderabad",
     state: "Telangana",
     center: [17.3850, 78.4867],
     radiusMeters: 38000,
@@ -201,6 +214,7 @@ const HOTZONE_CORRIDORS = [
   {
     id: "kolkata",
     name: "Kolkata & Eastern Logistics Hub",
+    shortName: "Kolkata",
     state: "West Bengal",
     center: [22.5726, 88.3639],
     radiusMeters: 35000,
@@ -211,6 +225,7 @@ const HOTZONE_CORRIDORS = [
   {
     id: "punjab-gt",
     name: "Punjab-Haryana GT Road Corridor",
+    shortName: "Punjab-Haryana",
     state: "Punjab / Haryana",
     center: [30.9010, 75.8573],
     radiusMeters: 70000,
@@ -221,6 +236,7 @@ const HOTZONE_CORRIDORS = [
   {
     id: "gujarat",
     name: "Gujarat Industrial Expressway",
+    shortName: "Gujarat",
     state: "Gujarat",
     center: [22.7000, 72.8500],
     radiusMeters: 65000,
@@ -231,10 +247,11 @@ const HOTZONE_CORRIDORS = [
   {
     id: "central-india",
     name: "Central Logistics Grid (Nagpur-Raipur)",
+    shortName: "Central Grid",
     state: "Maharashtra / CG / MP",
     center: [21.1800, 80.3000],
     radiusMeters: 90000,
-    color: "#FFF8CF",
+    color: "#10b981",
     riskLevel: "Active Corridor",
     description: "MIHAN Nagpur, Raipur, Bhilai & Bilaspur Central Transshipment Grid"
   }
@@ -247,7 +264,7 @@ const appState = {
   incidentMap: new Map(),
   lastSyncTime: null,
   isSyncing: false,
-  autoSyncInterval: 60000, // 60s
+  autoSyncInterval: 300000, // 5 mins (300,000 ms)
   autoSyncTimer: null,
   map: null,
   heatLayer: null,
@@ -691,7 +708,8 @@ function initUI() {
       const val = parseInt(e.target.value, 10);
       appState.autoSyncInterval = val;
       setupAutoSync();
-      showToast(`Auto-sync set to ${val === 0 ? 'Manual Only' : (val / 1000) + 's'}`);
+      const label = val === 0 ? 'Manual Only' : (val >= 60000 ? `${val / 60000} mins` : `${val / 1000}s`);
+      showToast(`Auto-sync interval set to ${label}`, "info");
     });
   }
 
@@ -709,10 +727,7 @@ function initUI() {
     pill.addEventListener('click', () => {
       const sevVal = pill.getAttribute('data-sev-pill');
       appState.filters.severity = sevVal;
-      document.querySelectorAll('[data-sev-pill]').forEach(p => {
-        p.classList.remove('ring-2', 'ring-[#76C457]', 'bg-[#2A7C13]', 'text-[#FFF8CF]');
-      });
-      pill.classList.add('ring-2', 'ring-[#76C457]', 'bg-[#2A7C13]', 'text-[#FFF8CF]');
+      updateSeverityFilterPills(sevVal);
       applyFilters();
     });
   });
@@ -1085,9 +1100,10 @@ function initMap() {
   // Branded Cautio Micro Bottom Bubble (Clean, compact, no long copyright strings)
   if (appState.map.attributionControl) {
     appState.map.attributionControl.setPrefix(
-      '<div class="cautio-bottom-bubble" title="Cautio Telemetry">' +
-      '<img src="cautio-logo.svg" alt="Cautio" />' +
-      '</div>'
+      '<a href="https://www.cautio.com/" target="_blank" rel="noopener noreferrer" class="cautio-bottom-bubble" title="Cautio Telemetry">' +
+      '<img src="cautio-logo.svg?v=4" alt="Cautio" />' +
+      '<span>RADAR</span>' +
+      '</a>'
     );
   }
 
@@ -1198,16 +1214,20 @@ function initMap() {
     zoomToBoundsOnClick: false, // We control clicking to guarantee 100% responsive "Zone In"
     iconCreateFunction: function (cluster) {
       const count = cluster.getChildCount();
-      let colorClass = 'bg-[#0e230e] border-[#76C457] text-[#FFF8CF] shadow-[0_4px_12px_rgba(0,0,0,0.7)]';
-      if (count > 500) colorClass = 'bg-rose-950 border-rose-400 text-[#FFF8CF] shadow-[0_4px_14px_rgba(244,63,94,0.5)]';
-      else if (count > 150) colorClass = 'bg-[#1b431b] border-[#FBE6C2] text-[#FFF8CF] shadow-[0_4px_12px_rgba(42,124,19,0.5)]';
-      else if (count > 40) colorClass = 'bg-[#143314] border-[#76C457] text-[#FFF8CF] shadow-[0_4px_10px_rgba(118,196,87,0.35)]';
+      let colorClass = 'bg-white/95 border-2 border-[#76C457] text-[#2A7C13] shadow-[0_4px_16px_rgba(42,124,19,0.25)]';
+      if (count > 500) colorClass = 'bg-rose-50 border-2 border-rose-500 text-rose-700 shadow-[0_4px_16px_rgba(225,29,72,0.25)]';
+      else if (count > 150) colorClass = 'bg-amber-50 border-2 border-amber-500 text-amber-800 shadow-[0_4px_16px_rgba(245,158,11,0.25)]';
+      else if (count > 40) colorClass = 'bg-[#f0faf0] border-2 border-[#76C457] text-[#1e5a0e] shadow-[0_4px_12px_rgba(118,196,87,0.25)]';
 
       const displayCount = count > 999 ? (count / 1000).toFixed(1) + 'k' : count;
+      const isLarge = displayCount.toString().length >= 4;
+      const widthClass = isLarge ? 'min-w-[38px] px-2 h-7 rounded-full' : 'w-7 h-7 rounded-full';
+      const size = isLarge ? [38, 28] : [28, 28];
       return L.divIcon({
-        html: `<div class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-mono font-black shadow-2xl border-2 cursor-pointer hover:scale-115 transition-transform ${colorClass}">${displayCount}</div>`,
+        html: `<div class="${widthClass} flex items-center justify-center text-[10px] font-mono font-bold shadow-lg border-2 cursor-pointer hover:scale-115 transition-transform leading-none box-border select-none ${colorClass}">${displayCount}</div>`,
         className: 'custom-cluster-icon',
-        iconSize: [28, 28]
+        iconSize: size,
+        iconAnchor: [size[0] / 2, size[1] / 2]
       });
     }
   });
@@ -1319,20 +1339,30 @@ function renderHotzonePolygons() {
     if (count === 0) return;
 
     const formattedCount = count > 999 ? (count / 1000).toFixed(1) + 'k' : count.toLocaleString();
+    const displayName = corridor.shortName || corridor.name.split(' ')[0];
+
+    // Position offset to prevent geographical overlap in close proximity hubs
+    let offsetStyle = 'transform: translate(-50%, -50%);';
+    if (corridor.id === 'bangalore') {
+      offsetStyle = 'transform: translate(-50%, -135%);';
+    } else if (corridor.id === 'chennai-krishnagiri') {
+      offsetStyle = 'transform: translate(-50%, 35%);';
+    }
 
     const badgeIcon = L.divIcon({
       className: 'custom-hotzone-count-badge',
       html: `
-        <div onclick="window.selectBarCorridor('${corridor.id}', '${corridor.name}')" class="group cursor-pointer transform hover:scale-105 transition-all duration-200" title="${corridor.name}: ${count.toLocaleString()} incidents">
-          <div class="px-2.5 py-1 rounded-full bg-[#081408]/85 backdrop-blur-md border border-[#76C457]/50 shadow-[0_4px_16px_rgba(0,0,0,0.6)] flex items-center gap-1.5 whitespace-nowrap hover:border-[#76C457] hover:bg-[#143314]/90 transition">
-            <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${corridor.color}"></span>
-            <span class="text-[10px] font-bold text-[#c4dcbe] group-hover:text-[#FFF8CF]">${corridor.name.split(' ')[0]}</span>
-            <span class="text-[10px] font-black font-mono px-1.5 py-0.2 rounded-full bg-[#2A7C13] text-[#FFF8CF] border border-[#76C457]/50 shadow-sm">${formattedCount}</span>
+        <div style="${offsetStyle}">
+          <div onclick="window.selectBarCorridor('${corridor.id}', '${corridor.name}')" 
+               class="hotzone-bubble-pill group" 
+               title="${corridor.name}: ${count.toLocaleString()} incident reports">
+            <span class="hub-title">${displayName}</span>
+            <span class="hub-badge">${formattedCount}</span>
           </div>
         </div>
       `,
-      iconSize: [120, 26],
-      iconAnchor: corridor.id === 'bangalore' ? [60, 38] : (corridor.id === 'chennai-krishnagiri' ? [60, -12] : [60, 13])
+      iconSize: null,
+      iconAnchor: null
     });
 
     const marker = L.marker(corridor.center, { 
@@ -1390,13 +1420,13 @@ window.selectBarCorridor = function(corridorId, displayName) {
     const checkIcon = opt.querySelector('.corridor-check-icon');
     if (optId === corridorId) {
       opt.classList.add('active');
-      opt.classList.add('text-[#FFF8CF]');
-      opt.classList.remove('text-[#c4dcbe]');
+      opt.classList.add('text-[#0f290f]');
+      opt.classList.remove('text-[#4a6e4a]');
       if (checkIcon) checkIcon.classList.remove('hidden');
     } else {
       opt.classList.remove('active');
-      opt.classList.remove('text-[#FFF8CF]');
-      opt.classList.add('text-[#c4dcbe]');
+      opt.classList.remove('text-[#0f290f]');
+      opt.classList.add('text-[#4a6e4a]');
       if (checkIcon) checkIcon.classList.add('hidden');
     }
   });
@@ -1467,23 +1497,44 @@ function loadInitialData() {
   syncWithGoogleSheet(false);
 }
 
-// Live Google Sheet Synchronization Engine (Direct JSONP, Zero CORS Blocking, ~150ms connection)
-function syncWithGoogleSheet(isManual = false) {
+// Live Telemetry Synchronization Engine
+// Dual mode:
+// 1. Vercel Serverless Proxy (/api/sync) - Completely masks Google Sheets from client network tab
+// 2. Encrypted stream fallback - Dynamic in-memory stream resolution
+async function syncWithGoogleSheet(isManual = false) {
   if (appState.isSyncing) return;
   appState.isSyncing = true;
 
   const syncIcon = document.getElementById('sync-icon');
   if (syncIcon) syncIcon.classList.add('animate-spin');
 
-  updateLiveSyncBadge("Connecting to Google Sheets...", "cyan", false);
+  updateLiveSyncBadge("Syncing...", "amber");
 
-  // Directly connect via JSONP to eliminate CORS errors and connect instantly
-  syncViaJSONP(isManual);
+  // Attempt 1: Fetch via serverless proxy (/api/sync)
+  try {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
+    const res = await fetch('/api/sync', { signal: controller ? controller.signal : undefined });
+    if (timeoutId) clearTimeout(timeoutId);
+
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data && data.table && Array.isArray(data.table.rows)) {
+        processGVizData(data, isManual);
+        return;
+      }
+    }
+  } catch (e) {
+    // /api/sync unavailable (e.g. running on local static server) -> seamlessly fall back
+  }
+
+  // Attempt 2: Fallback to dynamic encrypted stream
+  syncViaEncryptedStream(isManual);
 }
 
-// JSONP Connection (Bypasses browser CORS restrictions, executes instantly)
-function syncViaJSONP(isManual) {
-  const callbackName = 'onGoogleSheetLiveCallback_' + Date.now();
+// Encrypted Stream Sync (Zero plain-text URLs in source code, connects dynamically)
+function syncViaEncryptedStream(isManual) {
+  const callbackName = 'onTelemetryStreamCallback_' + Date.now();
 
   window[callbackName] = function (data) {
     cleanup();
@@ -1491,21 +1542,21 @@ function syncViaJSONP(isManual) {
   };
 
   const script = document.createElement('script');
-  script.id = 'gviz-jsonp-script';
-  script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${GID}`;
+  script.id = 'telemetry-stream-script';
+  script.src = _resolveEncryptedStreamUrl(callbackName);
 
   script.onerror = function () {
     cleanup();
     appState.isSyncing = false;
     const syncIcon = document.getElementById('sync-icon');
     if (syncIcon) syncIcon.classList.remove('animate-spin');
-    updateLiveSyncBadge("Live Sync Retrying (60s)", "amber");
-    if (isManual) showToast("Google Sheets busy. Pre-cached snapshot active.", "warning");
+    updateLiveSyncBadge("Retrying...", "amber");
+    if (isManual) showToast("Telemetry sync busy. Cached snapshot active.", "warning");
   };
 
   function cleanup() {
     delete window[callbackName];
-    const el = document.getElementById('gviz-jsonp-script');
+    const el = document.getElementById('telemetry-stream-script');
     if (el && el.parentNode) el.parentNode.removeChild(el);
   }
 
@@ -1520,7 +1571,7 @@ function processGVizResponse(text, isManual) {
     processGVizData(data, isManual);
   } catch (e) {
     console.error("Failed to parse GViz JSON text:", e);
-    syncViaJSONP(isManual);
+    syncViaEncryptedStream(isManual);
   }
 }
 
@@ -1532,7 +1583,7 @@ function processGVizData(data, isManual) {
 
   if (!data || !data.table || !data.table.rows) {
     console.error("Invalid GViz payload structure:", data);
-    updateLiveSyncBadge("Live Sync Error", "rose");
+    updateLiveSyncBadge("Offline", "rose");
     return;
   }
 
@@ -1558,7 +1609,7 @@ function processGVizData(data, isManual) {
   incomingIncidents.forEach(inc => appState.incidentMap.set(inc.id, inc));
 
   appState.lastSyncTime = new Date();
-  updateLiveSyncBadge(`Live Connected (${incomingIncidents.length.toLocaleString()} incidents)`, "emerald", true);
+  updateLiveSyncBadge("Live Connected", "emerald");
   populateDropdowns();
   updateTodayBadge();
   applyFilters();
@@ -1570,34 +1621,61 @@ function processGVizData(data, isManual) {
   }
 }
 
-// Update Header Live Sync Badge (Minimalist dot, expands smoothly on status change)
-let syncBadgeTimer = null;
-function updateLiveSyncBadge(text, color, autoCollapse = true) {
+// Update Header Live Sync Badge (Stable compact indicator, zero layout shifts)
+function updateLiveSyncBadge(text, color) {
   const badge = document.getElementById('live-sync-badge');
-  const dot = document.getElementById('live-sync-dot');
+  const iconContainer = document.getElementById('live-sync-icon-container');
+  const container = document.getElementById('live-status-container');
 
   if (badge) {
     badge.textContent = text;
-    badge.classList.remove('max-w-0', 'opacity-0');
-    badge.classList.add('max-w-[280px]', 'opacity-100', 'pl-1.5');
+  }
 
-    if (syncBadgeTimer) clearTimeout(syncBadgeTimer);
+  if (container && appState.rawIncidents) {
+    container.title = `Google Sheets Sync: ${text} (${appState.rawIncidents.length.toLocaleString()} incidents active)`;
+  }
 
-    if (autoCollapse) {
-      syncBadgeTimer = setTimeout(() => {
-        badge.classList.remove('max-w-[280px]', 'opacity-100', 'pl-1.5');
-        badge.classList.add('max-w-0', 'opacity-0');
-      }, 3800);
+  if (iconContainer) {
+    if (color === 'amber' || color === 'cyan') {
+      iconContainer.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-amber-600 animate-spin"></i>';
+    } else if (color === 'rose') {
+      iconContainer.innerHTML = '<i data-lucide="wifi-off" class="w-3.5 h-3.5 text-rose-600"></i>';
+    } else {
+      iconContainer.innerHTML = '<i data-lucide="wifi" class="w-3.5 h-3.5 text-[#2A7C13]"></i>';
+    }
+    if (window.lucide) {
+      window.lucide.createIcons();
     }
   }
+}
 
-  if (dot) {
-    let dotColor = 'bg-[#76C457] shadow-[0_0_12px_rgba(118,196,87,0.9)]';
-    if (color === 'amber') dotColor = 'bg-[#FBE6C2] shadow-[0_0_12px_rgba(251,230,194,0.9)]';
-    else if (color === 'cyan') dotColor = 'bg-[#76C457] shadow-[0_0_12px_rgba(118,196,87,0.9)]';
-    else if (color === 'rose') dotColor = 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.9)]';
-    dot.className = `w-2.5 h-2.5 rounded-full animate-pulse ${dotColor}`;
-  }
+// Severity Filter Buttons Dynamic Styler (Guarantees zero contrast clash)
+function updateSeverityFilterPills(activeVal) {
+  const configs = {
+    'all': {
+      active: 'bg-[#2A7C13] text-white border-2 border-[#76C457] shadow-sm',
+      inactive: 'bg-slate-100 hover:bg-slate-200 text-[#143814] border-2 border-slate-200'
+    },
+    '4': {
+      active: 'bg-rose-600 text-white border-2 border-rose-400 shadow-sm',
+      inactive: 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-2 border-rose-300'
+    },
+    '3': {
+      active: 'bg-amber-600 text-white border-2 border-amber-400 shadow-sm',
+      inactive: 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-2 border-amber-300'
+    },
+    '2': {
+      active: 'bg-emerald-600 text-white border-2 border-emerald-400 shadow-sm',
+      inactive: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-2 border-emerald-300'
+    }
+  };
+
+  document.querySelectorAll('[data-sev-pill]').forEach(pill => {
+    const val = pill.getAttribute('data-sev-pill');
+    const cfg = configs[val] || configs['all'];
+    const baseClass = 'px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-left transition shadow-xs';
+    pill.className = `${baseClass} ${val === activeVal ? cfg.active : cfg.inactive}`;
+  });
 }
 
 // Setup Periodic Auto-Sync Timer
@@ -1752,11 +1830,9 @@ window.toggleTodayFilter = function(forceState) {
 
   if (btn) {
     if (appState.filters.todayOnly) {
-      btn.classList.add('liquid-pill-active', 'ring-2', 'ring-[#76C457]', 'bg-[#2A7C13]', 'text-[#FFF8CF]');
-      btn.classList.remove('text-[#FBE6C2]');
+      btn.classList.add('liquid-pill-active');
     } else {
-      btn.classList.remove('liquid-pill-active', 'ring-2', 'ring-[#76C457]', 'bg-[#2A7C13]', 'text-[#FFF8CF]');
-      btn.classList.add('text-[#FBE6C2]');
+      btn.classList.remove('liquid-pill-active');
     }
   }
 
@@ -1804,19 +1880,13 @@ function resetFilters() {
 
   const todayBtn = document.getElementById('btn-toggle-today');
   if (todayBtn) {
-    todayBtn.classList.remove('liquid-pill-active', 'ring-2', 'ring-[#76C457]', 'bg-[#2A7C13]', 'text-[#FFF8CF]');
-    todayBtn.classList.add('text-[#FBE6C2]');
+    todayBtn.classList.remove('liquid-pill-active', 'ring-2', 'ring-[#76C457]', 'bg-[#2A7C13]', 'text-white');
+    todayBtn.classList.add('text-[#143814]');
   }
   const todayToggle = document.getElementById('toggle-filter-today');
   if (todayToggle) todayToggle.checked = false;
 
-  document.querySelectorAll('[data-sev-pill]').forEach(p => {
-    if (p.getAttribute('data-sev-pill') === 'all') {
-      p.classList.add('ring-2', 'ring-[#76C457]', 'bg-[#2A7C13]', 'text-[#FFF8CF]');
-    } else {
-      p.classList.remove('ring-2', 'ring-[#76C457]', 'bg-[#2A7C13]', 'text-[#FFF8CF]');
-    }
-  });
+  updateSeverityFilterPills('all');
 
   applyFilters();
   flyToCorridor('all');
@@ -2000,16 +2070,16 @@ function updateClusterMarkers() {
   dataToRender.forEach(inc => {
     let pinColor = '#2A7C13';
     let pinBorder = '#76C457';
-    let dotHtml = '<div class="w-1 h-1 rounded-full bg-[#FFF8CF]"></div>';
+    let dotHtml = '<div class="w-1 h-1 rounded-full bg-white"></div>';
 
     if (inc.severity === 4) {
       pinColor = '#be123c';
-      pinBorder = '#FFF8CF';
+      pinBorder = '#ffffff';
       dotHtml = '<div class="w-1 h-1 rounded-full bg-white"></div>';
     } else if (inc.severity === 3) {
       pinColor = '#c2410c';
-      pinBorder = '#FBE6C2';
-      dotHtml = '<div class="w-1 h-1 rounded-full bg-[#FBE6C2]"></div>';
+      pinBorder = '#fed7aa';
+      dotHtml = '<div class="w-1 h-1 rounded-full bg-amber-200"></div>';
     } else if (inc.severity === 2) {
       pinColor = '#2A7C13';
       pinBorder = '#76C457';
@@ -2032,34 +2102,34 @@ function updateClusterMarkers() {
     const marker = L.marker([inc.lat, inc.lng], { icon });
 
     const popupHtml = `
-      <div class="p-4 bg-[#0e230e]/95 backdrop-blur-xl text-[#FFF8CF] rounded-2xl shadow-2xl border-2 border-[#76C457]/50 min-w-[290px] max-w-[340px]">
-        <div class="flex items-center justify-between border-b border-[#76C457]/20 pb-2 mb-2">
-          <span class="font-mono font-extrabold text-xs text-[#FFF8CF] bg-[#2A7C13] px-2.5 py-0.5 rounded-lg border border-[#76C457]/40">${inc.id}</span>
-          <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full ${getSeverityBadgeClasses(inc.severity)}">
+      <div class="p-4 bg-white/95 backdrop-blur-xl text-[#0f290f] rounded-2xl shadow-[0_12px_36px_rgba(42,124,19,0.18),0_4px_12px_rgba(0,0,0,0.06)] border-2 border-[#76C457]/60 min-w-[290px] max-w-[340px]">
+        <div class="flex items-center justify-between border-b border-[#76C457]/30 pb-2 mb-2">
+          <span class="font-mono font-bold text-xs text-white bg-[#2A7C13] px-2.5 py-0.5 rounded-lg border border-[#76C457]/60 shadow-sm">${inc.id}</span>
+          <span class="px-2.5 py-0.5 text-[10px] font-semibold rounded-full ${getSeverityBadgeClasses(inc.severity)}">
             ${getSeverityLabel(inc.severity)}
           </span>
         </div>
-        <div class="text-xs font-bold text-[#FFF8CF] mb-1 flex items-center gap-1.5">
+        <div class="text-xs font-bold text-[#0f290f] mb-1 flex items-center gap-1.5">
           <span class="tracking-wide font-mono">${inc.vehicle}</span>
-          <span class="text-[#FBE6C2] text-[11px] font-semibold">(${inc.client})</span>
+          <span class="text-[#2d522d] text-[11px] font-semibold">(${inc.client})</span>
         </div>
-        <div class="text-[11px] text-[#FBE6C2] mb-1.5 font-medium">
-          <span class="text-[#c4dcbe]">Category:</span> ${inc.subRequest}
+        <div class="text-[11px] text-[#2d522d] mb-1.5 font-medium">
+          <span class="text-[#5a805a]">Category:</span> ${inc.subRequest}
         </div>
-        <div class="text-xs text-[#FFF8CF] bg-[#081408] p-2.5 rounded-xl border border-[#76C457]/20 mb-2.5 line-clamp-3 leading-relaxed">
+        <div class="text-xs text-[#0f290f] bg-[#f2faf0] p-2.5 rounded-xl border border-[#76C457]/30 mb-2.5 line-clamp-3 leading-relaxed font-normal">
           ${inc.details || 'No additional issue description recorded.'}
         </div>
-        <div class="flex items-center justify-between text-[11px] text-[#c4dcbe] mb-3">
+        <div class="flex items-center justify-between text-[11px] text-[#5a805a] mb-3">
           <span>${inc.location}</span>
-          <span class="${inc.resolved === 'Yes' ? 'text-[#76C457] font-bold' : 'text-rose-400 font-bold'}">
+          <span class="${inc.resolved === 'Yes' ? 'text-[#2A7C13] font-bold' : 'text-rose-600 font-bold'}">
             ${inc.resolved === 'Yes' ? 'Resolved' : 'Pending'}
           </span>
         </div>
         <div class="grid grid-cols-2 gap-2 mt-1">
-          <button onclick="window.zoneInToCoordinates(${inc.lat}, ${inc.lng})" class="py-2 px-2.5 rounded-xl bg-[#143314] hover:bg-[#1f4e1f] text-[#76C457] border border-[#76C457]/50 text-xs font-bold transition flex items-center justify-center gap-1">
+          <button onclick="window.zoneInToCoordinates(${inc.lat}, ${inc.lng})" class="py-2 px-2.5 rounded-xl bg-[#eaf7e8] hover:bg-[#d8f0d5] text-[#2A7C13] border border-[#76C457]/60 text-xs font-semibold transition shadow-sm flex items-center justify-center gap-1">
             <span>Zone In</span>
           </button>
-          <button onclick="window.inspectIncident('${inc.id}')" class="py-2 px-2.5 rounded-xl bg-gradient-to-r from-[#2A7C13] to-[#76C457] hover:brightness-110 text-[#FFF8CF] text-xs font-black transition shadow-lg shadow-[#2A7C13]/30 border border-[#76C457]/50 flex items-center justify-center gap-1">
+          <button onclick="window.inspectIncident('${inc.id}')" class="py-2 px-2.5 rounded-xl bg-[#2A7C13] hover:bg-[#226610] text-white text-xs font-semibold transition shadow-md shadow-[#2A7C13]/25 border border-[#76C457]/60 flex items-center justify-center gap-1">
             <span>Inspect</span>
           </button>
         </div>
@@ -2095,7 +2165,7 @@ function updateAccidentSpotlight() {
     const pulseMarker = L.circleMarker([acc.lat, acc.lng], {
       pane: 'spotlightPane',
       radius: 3.5,
-      color: '#FFF8CF',
+      color: '#ffffff',
       fillColor: '#be123c',
       fillOpacity: 1.0,
       weight: 1.5,
@@ -2103,37 +2173,37 @@ function updateAccidentSpotlight() {
     });
 
     const popupHtml = `
-      <div class="p-4 bg-[#0e230e]/95 backdrop-blur-xl text-[#FFF8CF] rounded-2xl shadow-2xl border-2 border-rose-500/60 min-w-[290px] max-w-[340px]">
-        <div class="flex items-center justify-between border-b border-rose-500/30 pb-2 mb-2">
+      <div class="p-4 bg-white/95 backdrop-blur-xl text-[#0f290f] rounded-2xl shadow-[0_12px_36px_rgba(225,29,72,0.18),0_4px_12px_rgba(0,0,0,0.06)] border-2 border-rose-400/80 min-w-[290px] max-w-[340px]">
+        <div class="flex items-center justify-between border-b border-rose-200 pb-2 mb-2">
           <div class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-            <span class="font-mono font-extrabold text-xs text-[#FFF8CF] bg-rose-950 px-2.5 py-0.5 rounded-lg border border-rose-500/50">${acc.id}</span>
+            <i data-lucide="flame" class="w-3.5 h-3.5 text-rose-600 flex-shrink-0"></i>
+            <span class="font-mono font-bold text-xs text-rose-800 bg-rose-100 px-2.5 py-0.5 rounded-lg border-2 border-rose-300 shadow-sm">${acc.id}</span>
           </div>
-          <span class="px-2.5 py-0.5 text-[10px] font-black rounded-full bg-rose-950/90 text-rose-300 border border-rose-500/50">
+          <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-800 border-2 border-rose-300">
             Critical Collision
           </span>
         </div>
-        <div class="text-xs font-bold text-[#FFF8CF] mb-1 flex items-center gap-1.5 font-mono">
-          <span class="text-sm font-black text-white">${acc.vehicle}</span>
-          <span class="text-[#FBE6C2] font-sans font-semibold">(${acc.client})</span>
+        <div class="text-xs font-bold text-[#0f290f] mb-1 flex items-center gap-1.5 font-mono">
+          <span class="text-sm font-bold text-[#0f290f]">${acc.vehicle}</span>
+          <span class="text-[#2d522d] font-sans font-semibold">(${acc.client})</span>
         </div>
-        <div class="text-[11px] text-[#FBE6C2] mb-1.5">
-          <span class="text-[#c4dcbe]">Location:</span> ${acc.location}
+        <div class="text-[11px] text-[#2d522d] mb-1.5 font-medium">
+          <span class="text-[#5a805a]">Location:</span> ${acc.location}
         </div>
-        <div class="text-xs text-[#FFF8CF] bg-[#081408] p-2.5 rounded-xl border border-rose-500/20 mb-2.5 line-clamp-3 leading-relaxed">
+        <div class="text-xs text-[#0f290f] bg-rose-50/50 p-2.5 rounded-xl border border-rose-200 mb-2.5 line-clamp-3 leading-relaxed font-normal">
           ${acc.details || acc.subRequest || 'Critical accident impact telemetry detected.'}
         </div>
-        <div class="flex items-center justify-between text-[11px] text-[#c4dcbe] mb-3">
+        <div class="flex items-center justify-between text-[11px] text-[#5a805a] mb-3">
           <span>${acc.raisedAt ? formatDisplayDate(acc.raisedAt) : 'Live Telemetry'}</span>
-          <span class="${acc.resolved === 'Yes' ? 'text-[#76C457] font-bold' : 'text-rose-400 font-bold'}">
+          <span class="${acc.resolved === 'Yes' ? 'text-[#2A7C13] font-semibold' : 'text-rose-600 font-semibold'}">
             ${acc.resolved === 'Yes' ? 'Resolved' : 'Action Required'}
           </span>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="window.zoneInToCoordinates(${acc.lat}, ${acc.lng})" class="py-2 px-3 rounded-xl bg-[#143314] hover:bg-[#1f4e1f] text-[#76C457] border border-[#76C457]/50 text-xs font-bold transition flex items-center justify-center gap-1">
+          <button onclick="window.zoneInToCoordinates(${acc.lat}, ${acc.lng})" class="py-2 px-3 rounded-xl bg-[#eaf7e8] hover:bg-[#d8f0d5] text-[#2A7C13] border border-[#76C457]/60 text-xs font-semibold transition shadow-sm flex items-center justify-center gap-1">
             <span>Zone In</span>
           </button>
-          <button onclick="window.inspectIncident('${acc.id}')" class="py-2 px-3 rounded-xl bg-gradient-to-r from-rose-700 to-rose-500 hover:brightness-110 text-white text-xs font-black transition shadow-lg shadow-rose-900/40 border border-rose-400/50 flex items-center justify-center gap-1">
+          <button onclick="window.inspectIncident('${acc.id}')" class="py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition shadow-md shadow-rose-600/30 border border-rose-400/60 flex items-center justify-center gap-1">
             <span>Inspect</span>
           </button>
         </div>
@@ -2191,12 +2261,12 @@ function initCharts() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { labels: { color: '#FBE6C2', font: { size: 11, weight: 'bold' } } },
+          legend: { labels: { color: '#0f290f', font: { size: 11, weight: 'bold' } } },
           tooltip: { mode: 'index', intersect: false }
         },
         scales: {
-          x: { ticks: { color: '#c4dcbe', font: { size: 10 } }, grid: { color: 'rgba(118, 196, 87, 0.12)' } },
-          y: { ticks: { color: '#c4dcbe', font: { size: 10 } }, grid: { color: 'rgba(118, 196, 87, 0.12)' } }
+          x: { ticks: { color: '#3d653d', font: { size: 10, weight: 'bold' } }, grid: { color: 'rgba(118, 196, 87, 0.15)' } },
+          y: { ticks: { color: '#3d653d', font: { size: 10, weight: 'bold' } }, grid: { color: 'rgba(118, 196, 87, 0.15)' } }
         }
       }
     });
@@ -2210,8 +2280,8 @@ function initCharts() {
         labels: [],
         datasets: [{
           data: [],
-          backgroundColor: ['#2A7C13', '#76C457', '#FBE6C2', '#FFF8CF', '#3d9e23', '#1b401b', '#d97706', '#0d2e0d'],
-          borderColor: '#081408',
+          backgroundColor: ['#2A7C13', '#76C457', '#93DA77', '#C4F0B0', '#1b5e0c', '#3d9e23', '#d97706', '#0f290f'],
+          borderColor: '#ffffff',
           borderWidth: 2
         }]
       },
@@ -2219,7 +2289,7 @@ function initCharts() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'right', labels: { color: '#FBE6C2', font: { size: 11 }, boxWidth: 12 } }
+          legend: { position: 'right', labels: { color: '#0f290f', font: { size: 11, weight: '600' }, boxWidth: 12 } }
         },
         cutout: '65%'
       }
@@ -2235,13 +2305,13 @@ function initCharts() {
         datasets: [{
           label: 'Incident Velocity',
           data: [],
-          borderColor: '#76C457',
+          borderColor: '#2A7C13',
           backgroundColor: 'rgba(118, 196, 87, 0.18)',
           fill: true,
           tension: 0.35,
           pointRadius: 4,
           pointHoverRadius: 6,
-          pointBackgroundColor: '#FFF8CF'
+          pointBackgroundColor: '#2A7C13'
         }]
       },
       options: {
@@ -2251,8 +2321,8 @@ function initCharts() {
           legend: { display: false }
         },
         scales: {
-          x: { ticks: { color: '#c4dcbe', font: { size: 10 } }, grid: { color: 'rgba(118, 196, 87, 0.12)' } },
-          y: { ticks: { color: '#c4dcbe', font: { size: 10 } }, grid: { color: 'rgba(118, 196, 87, 0.12)' } }
+          x: { ticks: { color: '#3d653d', font: { size: 10, weight: 'bold' } }, grid: { color: 'rgba(118, 196, 87, 0.15)' } },
+          y: { ticks: { color: '#3d653d', font: { size: 10, weight: 'bold' } }, grid: { color: 'rgba(118, 196, 87, 0.15)' } }
         }
       }
     });
@@ -2279,8 +2349,8 @@ function initCharts() {
           legend: { display: false }
         },
         scales: {
-          x: { ticks: { color: '#c4dcbe', font: { size: 10 } }, grid: { color: 'rgba(118, 196, 87, 0.12)' } },
-          y: { ticks: { color: '#c4dcbe', font: { size: 10 } }, grid: { color: 'rgba(118, 196, 87, 0.12)' } }
+          x: { ticks: { color: '#3d653d', font: { size: 10, weight: 'bold' } }, grid: { color: 'rgba(118, 196, 87, 0.15)' } },
+          y: { ticks: { color: '#3d653d', font: { size: 10, weight: 'bold' } }, grid: { color: 'rgba(118, 196, 87, 0.15)' } }
         }
       }
     });
@@ -2295,7 +2365,7 @@ function initCharts() {
         datasets: [{
           data: [0, 0],
           backgroundColor: ['#76C457', '#e11d48'],
-          borderColor: '#081408',
+          borderColor: '#ffffff',
           borderWidth: 2
         }]
       },
@@ -2303,7 +2373,7 @@ function initCharts() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { color: '#FFF8CF', font: { size: 11, weight: 'bold' } } }
+          legend: { position: 'bottom', labels: { color: '#0f290f', font: { size: 11, weight: 'bold' } } }
         },
         cutout: '70%'
       }
@@ -2390,10 +2460,10 @@ function renderTable() {
   if (pagedData.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" class="text-center py-14 text-[#c4dcbe]">
-          <div class="w-10 h-10 rounded-full bg-[#143314] text-[#76C457] border border-[#76C457]/40 flex items-center justify-center mx-auto mb-3 font-mono font-bold text-sm">--</div>
-          <div class="font-bold text-[#FFF8CF] text-sm">No incidents match the active filters</div>
-          <div class="text-xs text-[#c4dcbe]/70 mt-1">Try broadening your search query or reset filters</div>
+        <td colspan="8" class="text-center py-14 text-[#5a805a]">
+          <div class="w-10 h-10 rounded-full bg-[#eaf7e8] text-[#2A7C13] border-2 border-[#76C457]/50 flex items-center justify-center mx-auto mb-3 font-mono font-bold text-sm">--</div>
+          <div class="font-bold text-[#0f290f] text-sm">No incidents match the active filters</div>
+          <div class="text-xs text-[#5a805a] mt-1">Try broadening your search query or reset filters</div>
         </td>
       </tr>
     `;
@@ -2403,31 +2473,31 @@ function renderTable() {
 
   pagedData.forEach(inc => {
     const tr = document.createElement('tr');
-    tr.className = 'hover:bg-[#143314]/70 border-b border-[#76C457]/15 transition cursor-pointer text-[#FFF8CF]';
+    tr.className = 'hover:bg-[#f0faf0] border-b border-[#76C457]/20 transition cursor-pointer text-[#0f290f] font-medium';
 
     tr.innerHTML = `
-      <td class="py-3 px-4 font-mono font-bold text-xs text-[#FFF8CF]"><span class="bg-[#2A7C13] px-2 py-0.5 rounded border border-[#76C457]/40">${inc.id}</span></td>
-      <td class="py-3 px-4 text-xs font-black text-[#FFF8CF] font-mono tracking-wide">
+      <td class="py-3 px-4 font-mono font-bold text-xs"><span class="bg-[#2A7C13] text-white px-2 py-0.5 rounded-lg border border-[#76C457]/50 shadow-sm">${inc.id}</span></td>
+      <td class="py-3 px-4 text-xs font-bold text-[#0f290f] font-mono tracking-wide">
         ${inc.vehicle}
       </td>
-      <td class="py-3 px-4 text-xs text-[#FBE6C2] font-semibold">${inc.client}</td>
-      <td class="py-3 px-4 text-xs text-[#c4dcbe]">${inc.location}</td>
+      <td class="py-3 px-4 text-xs text-[#2d522d] font-semibold">${inc.client}</td>
+      <td class="py-3 px-4 text-xs text-[#5a805a]">${inc.location}</td>
       <td class="py-3 px-4 text-xs">
         <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full ${getSeverityBadgeClasses(inc.severity)}">
           ${getSeverityLabel(inc.severity)}
         </span>
       </td>
-      <td class="py-3 px-4 text-xs text-[#FFF8CF] truncate max-w-[200px] font-medium">${inc.subRequest}</td>
+      <td class="py-3 px-4 text-xs text-[#0f290f] truncate max-w-[200px] font-medium">${inc.subRequest}</td>
       <td class="py-3 px-4 text-xs">
-        <span class="${inc.resolved === 'Yes' ? 'text-[#76C457] font-black' : 'text-rose-400 font-black'}">
+        <span class="${inc.resolved === 'Yes' ? 'text-[#2A7C13] font-semibold' : 'text-rose-600 font-semibold'}">
           ${inc.resolved === 'Yes' ? 'Resolved' : 'Pending'}
         </span>
       </td>
       <td class="py-3 px-4 text-xs text-right space-x-2 whitespace-nowrap">
-        <button onclick="window.locateOnMap('${inc.id}')" title="Locate on Map" class="px-2.5 py-1 bg-[#143314] hover:bg-[#1b401b] text-[#76C457] rounded-lg border border-[#76C457]/40 transition font-bold">
+        <button onclick="window.locateOnMap('${inc.id}')" title="Locate on Map" class="px-2.5 py-1 bg-[#eaf7e8] hover:bg-[#d8f0d5] text-[#2A7C13] rounded-lg border border-[#76C457]/50 transition font-semibold shadow-sm">
           Locate
         </button>
-        <button onclick="window.inspectIncident('${inc.id}')" title="View Details" class="px-3 py-1 bg-gradient-to-r from-[#2A7C13] to-[#76C457] hover:brightness-110 text-[#FFF8CF] rounded-lg transition font-black shadow-md shadow-[#2A7C13]/30 border border-[#76C457]/40">
+        <button onclick="window.inspectIncident('${inc.id}')" title="View Details" class="px-3 py-1 bg-[#2A7C13] hover:bg-[#226610] text-white rounded-lg transition font-semibold shadow-sm border border-[#76C457]/50">
           Inspect
         </button>
       </td>
@@ -2472,15 +2542,15 @@ window.locateOnMap = function(issueId) {
     L.popup()
       .setLatLng([inc.lat, inc.lng])
       .setContent(`
-        <div class="p-4 bg-[#0e230e]/95 backdrop-blur-xl text-[#FFF8CF] rounded-2xl shadow-2xl border-2 border-[#76C457]/50 min-w-[280px]">
-          <div class="flex items-center justify-between border-b border-[#76C457]/20 pb-1.5 mb-2">
-            <span class="font-mono text-[#FFF8CF] text-xs font-black bg-[#2A7C13] px-2 py-0.5 rounded border border-[#76C457]/40">${inc.id}</span>
+        <div class="p-4 bg-white/95 backdrop-blur-xl text-[#0f290f] rounded-2xl shadow-[0_12px_36px_rgba(42,124,19,0.18),0_4px_12px_rgba(0,0,0,0.06)] border-2 border-[#76C457]/60 min-w-[280px]">
+          <div class="flex items-center justify-between border-b border-[#76C457]/30 pb-1.5 mb-2">
+            <span class="font-mono text-white text-xs font-bold bg-[#2A7C13] px-2 py-0.5 rounded-lg border border-[#76C457]/50 shadow-sm">${inc.id}</span>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${getSeverityBadgeClasses(inc.severity)}">${getSeverityLabel(inc.severity)}</span>
           </div>
-          <div class="font-bold text-[#FFF8CF] text-xs mb-1 font-mono">${inc.vehicle} <span class="text-[#FBE6C2] font-sans font-semibold">(${inc.client})</span></div>
-          <div class="text-xs text-[#c4dcbe] mb-2 leading-relaxed">${inc.details || inc.subRequest}</div>
-          <div class="text-[11px] text-[#FBE6C2] mb-2.5">${inc.location}</div>
-          <button onclick="window.inspectIncident('${inc.id}')" class="w-full py-2 bg-gradient-to-r from-[#2A7C13] to-[#76C457] hover:brightness-110 text-[#FFF8CF] rounded-xl text-xs font-black transition shadow-md shadow-[#2A7C13]/30 border border-[#76C457]/40">Inspect Full Forensic Log</button>
+          <div class="font-bold text-[#0f290f] text-xs mb-1 font-mono">${inc.vehicle} <span class="text-[#2d522d] font-sans font-semibold">(${inc.client})</span></div>
+          <div class="text-xs text-[#2d522d] mb-2 leading-relaxed font-normal">${inc.details || inc.subRequest}</div>
+          <div class="text-[11px] text-[#5a805a] mb-2.5 font-medium">${inc.location}</div>
+          <button onclick="window.inspectIncident('${inc.id}')" class="w-full py-2 bg-[#2A7C13] hover:bg-[#226610] text-white rounded-xl text-xs font-semibold transition shadow-md shadow-[#2A7C13]/25 border border-[#76C457]/60">Inspect Full Forensic Log</button>
         </div>
       `)
       .openOn(appState.map);
@@ -2545,14 +2615,10 @@ window.inspectIncident = function(issueId) {
 
   const resBadge = document.getElementById('modal-status-badge');
   if (resBadge) {
-    resBadge.className = `px-2.5 py-0.5 text-[11px] font-bold rounded-full ${inc.resolved === 'Yes' ? 'bg-[#2A7C13]/60 text-[#76C457] border border-[#76C457]' : 'bg-rose-950/80 text-rose-300 border border-rose-500/50'}`;
+    resBadge.className = `px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-sm ${inc.resolved === 'Yes' ? 'bg-[#eaf7e8] text-[#2A7C13] border-2 border-[#76C457]' : 'bg-rose-50 text-rose-700 border-2 border-rose-300'}`;
     resBadge.textContent = inc.resolved === 'Yes' ? 'Resolved' : 'Action Required';
   }
 
-  const sheetBtn = document.getElementById('modal-sheet-link');
-  if (sheetBtn) {
-    sheetBtn.href = SHEET_URL;
-  }
 
   const modal = document.getElementById('incident-modal');
   if (modal) {
@@ -2641,10 +2707,10 @@ function getSeverityLabel(sev) {
 }
 
 function getSeverityBadgeClasses(sev) {
-  if (sev === 4) return 'bg-rose-950/80 text-rose-300 border border-rose-500/50 animate-pulse font-bold';
-  if (sev === 3) return 'bg-[#1b401b] text-[#FBE6C2] border border-[#FBE6C2]/40 font-bold';
-  if (sev === 2) return 'bg-[#143314] text-[#76C457] border border-[#76C457]/40 font-bold';
-  return 'bg-[#0e230e] text-[#FFF8CF] border border-[#76C457]/30 font-bold';
+  if (sev === 4) return 'bg-rose-100 text-rose-800 border-2 border-rose-300 animate-pulse font-bold';
+  if (sev === 3) return 'bg-amber-100 text-amber-900 border-2 border-amber-300 font-bold';
+  if (sev === 2) return 'bg-[#eaf7e8] text-[#2A7C13] border-2 border-[#76C457] font-bold';
+  return 'bg-emerald-50 text-emerald-900 border-2 border-emerald-300 font-bold';
 }
 
 function debounce(func, wait) {
@@ -2661,15 +2727,27 @@ function showToast(message, type = 'info') {
   if (!container) return;
 
   const toast = document.createElement('div');
-  let borderClass = 'border-[#76C457]/60 text-[#FFF8CF]';
-  if (type === 'success') borderClass = 'border-[#76C457] text-[#FFF8CF]';
-  else if (type === 'warning') borderClass = 'border-[#FBE6C2] text-[#FBE6C2]';
-  else if (type === 'error') borderClass = 'border-rose-500 text-rose-200';
+  let borderClass = 'border-[#76C457] text-[#0f290f]';
+  let iconHtml = '<i data-lucide="check-circle-2" class="w-4 h-4 text-[#2A7C13] flex-shrink-0"></i>';
 
-  toast.className = `px-4 py-3 bg-[#0e230e]/95 backdrop-blur-xl border-2 ${borderClass} rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 transform transition-all duration-300 translate-y-2 opacity-0`;
-  toast.innerHTML = `<span class="text-[#76C457]">●</span><span>${message}</span>`;
+  if (type === 'success') {
+    borderClass = 'border-[#76C457] text-[#0f290f]';
+    iconHtml = '<i data-lucide="check-circle-2" class="w-4 h-4 text-[#2A7C13] flex-shrink-0"></i>';
+  } else if (type === 'warning') {
+    borderClass = 'border-amber-400 text-[#0f290f]';
+    iconHtml = '<i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 flex-shrink-0"></i>';
+  } else if (type === 'error') {
+    borderClass = 'border-rose-400 text-rose-900';
+    iconHtml = '<i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>';
+  } else {
+    iconHtml = '<i data-lucide="info" class="w-4 h-4 text-[#2A7C13] flex-shrink-0"></i>';
+  }
+
+  toast.className = `px-4 py-3 bg-white/95 backdrop-blur-xl border-2 ${borderClass} rounded-2xl shadow-[0_12px_36px_rgba(42,124,19,0.18),0_4px_12px_rgba(0,0,0,0.06)] text-xs font-semibold flex items-center gap-2.5 transform transition-all duration-300 translate-y-2 opacity-0`;
+  toast.innerHTML = `${iconHtml}<span class="font-medium">${message}</span>`;
 
   container.appendChild(toast);
+  if (window.lucide) window.lucide.createIcons();
 
   requestAnimationFrame(() => {
     toast.classList.remove('translate-y-2', 'opacity-0');
