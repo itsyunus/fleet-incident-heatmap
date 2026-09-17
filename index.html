@@ -44,7 +44,7 @@
   <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -60,7 +60,7 @@
       overflow: hidden;
       background-color: #081408;
       color: #FFF8CF;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -259,28 +259,84 @@
       box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4) !important;
     }
 
-    /* Corridor Custom Liquid Dropdown */
+    /* ==========================================================================
+       CORRIDOR DROPDOWN — PREMIUM LIQUID GLASS ENGINE
+       ========================================================================== */
     .corridor-menu-glass {
-      background: rgba(10, 26, 10, 0.94) !important;
-      backdrop-filter: blur(32px) saturate(210%) !important;
-      -webkit-backdrop-filter: blur(32px) saturate(210%) !important;
-      border-top: 1.5px solid rgba(255, 248, 207, 0.45) !important;
-      border-left: 1px solid rgba(118, 196, 87, 0.35) !important;
-      border-right: 1px solid rgba(118, 196, 87, 0.35) !important;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.6) !important;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(42, 124, 19, 0.35), inset 0 1px 0 rgba(255, 248, 207, 0.25) !important;
+      background: rgba(10, 26, 10, 0.95) !important;
+      backdrop-filter: blur(32px) saturate(150%) !important;
+      -webkit-backdrop-filter: blur(32px) saturate(150%) !important;
+      border-top: 1px solid rgba(255, 248, 207, 0.45) !important;
+      border-left: 1px solid rgba(118, 196, 87, 0.3) !important;
+      border-right: 1px solid rgba(118, 196, 87, 0.3) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.5) !important;
+      border-radius: 1.25rem !important;
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.7),
+        0 0 30px rgba(42, 124, 19, 0.15),
+        inset 0 1px 0 rgba(255, 248, 207, 0.25) !important;
+      animation: corridorDropIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+      overflow: hidden;
+      position: relative;
+    }
+    .corridor-menu-glass::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 2rem;
+      right: 2rem;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 248, 207, 0.5), transparent);
+      pointer-events: none;
+      z-index: 1;
+    }
+    @keyframes corridorDropIn {
+      0% {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.96);
+        filter: blur(4px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
     }
     .corridor-option {
-      transition: all 0.2s ease;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
       cursor: pointer;
+      border: 1px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    .corridor-option::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      background: radial-gradient(ellipse at 30% 50%, rgba(118, 196, 87, 0.15) 0%, transparent 70%);
+      transition: opacity 0.25s ease;
+      pointer-events: none;
     }
     .corridor-option:hover {
-      background: rgba(42, 124, 19, 0.45) !important;
-      transform: translateX(2px);
+      background: rgba(42, 124, 19, 0.35) !important;
+      border-color: rgba(118, 196, 87, 0.3) !important;
+      transform: translateX(3px);
+      box-shadow: 0 2px 12px rgba(42, 124, 19, 0.2);
+    }
+    .corridor-option:hover::after {
+      opacity: 1;
+    }
+    .corridor-option:active {
+      transform: translateX(3px) scale(0.98);
     }
     .corridor-option.active {
-      background: rgba(42, 124, 19, 0.75) !important;
-      border: 1px solid rgba(118, 196, 87, 0.5) !important;
+      background: linear-gradient(135deg, rgba(42, 124, 19, 0.7) 0%, rgba(118, 196, 87, 0.4) 100%) !important;
+      border: 1px solid rgba(118, 196, 87, 0.55) !important;
+      box-shadow:
+        0 4px 16px rgba(42, 124, 19, 0.35),
+        inset 0 1px 0 rgba(255, 248, 207, 0.2) !important;
     }
 
     /* Map Panes Stacking Order: Numbers strictly sit in front of hot dots */
@@ -422,134 +478,123 @@
         <!-- Hidden input for state -->
         <input type="hidden" id="bar-corridor-select" value="all">
 
-        <!-- Thematic Liquid Glass Dropdown Menu -->
-        <div id="corridor-dropdown-menu" class="hidden absolute left-0 top-full mt-2 w-72 sm:w-80 corridor-menu-glass rounded-2xl p-2 z-[600] space-y-1 text-xs">
-          <div class="px-3 py-1.5 border-b border-[#76C457]/20 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-[#FBE6C2]">
-            <span>Strategic Freight Corridors</span>
-            <span class="text-[#76C457] font-bold">9 Belts</span>
+        <!-- Premium Liquid Glass Corridor Dropdown -->
+        <div id="corridor-dropdown-menu" class="hidden absolute left-0 top-full mt-2.5 w-[22rem] corridor-menu-glass z-[600] text-xs">
+          
+          <!-- Header Bar -->
+          <div class="px-4 py-3 flex items-center justify-between border-b border-[#76C457]/15">
+            <div class="flex items-center gap-2">
+              <div class="w-5 h-5 rounded-lg bg-[#2A7C13]/60 border border-[#76C457]/40 flex items-center justify-center">
+                <i data-lucide="radar" class="w-2.5 h-2.5 text-[#76C457]"></i>
+              </div>
+              <span class="text-[10px] font-black uppercase tracking-[0.15em] text-[#FBE6C2]">Strategic Corridors</span>
+            </div>
+            <span class="text-[10px] font-mono font-bold text-[#76C457] bg-[#081408]/60 px-2 py-0.5 rounded-full border border-[#76C457]/25">9 Belts</span>
           </div>
           
-          <div class="max-h-72 overflow-y-auto space-y-1 pr-1">
+          <!-- Corridor List -->
+          <div class="max-h-[21rem] overflow-y-auto p-2 space-y-0.5">
+
             <!-- All Corridors -->
-            <div onclick="selectBarCorridor('all', 'All India Corridors')" class="corridor-option corridor-menu-item active w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#FFF8CF]" data-corridor-id="all">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-[#76C457] shadow-[0_0_8px_#76C457]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">All India Corridors</div>
-                  <div class="text-[10px] text-[#c4dcbe]">National Surveillance Grid</div>
-                </div>
+            <div onclick="selectBarCorridor('all', 'All India Corridors')" class="corridor-option corridor-menu-item active w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#FFF8CF]" data-corridor-id="all">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">All India Corridors</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">National Surveillance Grid</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
 
+            <!-- Divider -->
+            <div class="mx-3 my-1 h-px bg-gradient-to-r from-transparent via-[#76C457]/20 to-transparent"></div>
+
             <!-- Bangalore -->
-            <div onclick="selectBarCorridor('bangalore', 'Bangalore Belt')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="bangalore">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Bangalore Logistics Belt</div>
-                  <div class="text-[10px] text-[#c4dcbe]">Karnataka (Electronic City, Hosur)</div>
-                </div>
+            <div onclick="selectBarCorridor('bangalore', 'Bangalore Belt')" class="corridor-option corridor-menu-item w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="bangalore">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">Bangalore Logistics Belt</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">Karnataka — Electronic City, Hosur</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
 
             <!-- Mumbai-Pune -->
-            <div onclick="selectBarCorridor('mumbai-pune', 'Mumbai-Pune Belt')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="mumbai-pune">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Mumbai-Pune Expressway</div>
-                  <div class="text-[10px] text-[#c4dcbe]">Maharashtra (JNPT, Bhiwandi, Pune)</div>
-                </div>
+            <div onclick="selectBarCorridor('mumbai-pune', 'Mumbai-Pune Belt')" class="corridor-option corridor-menu-item w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="mumbai-pune">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">Mumbai-Pune Expressway</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">Maharashtra — JNPT, Bhiwandi, Pune</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
 
             <!-- Delhi-NCR -->
-            <div onclick="selectBarCorridor('delhi-ncr', 'Delhi-NCR Gateway')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="delhi-ncr">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-[#FBE6C2] shadow-[0_0_8px_rgba(251,230,194,0.6)]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Delhi-NCR Gateway</div>
-                  <div class="text-[10px] text-[#c4dcbe]">Delhi / Haryana / UP (NH-48)</div>
-                </div>
+            <div onclick="selectBarCorridor('delhi-ncr', 'Delhi-NCR Gateway')" class="corridor-option corridor-menu-item w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="delhi-ncr">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">Delhi-NCR Gateway</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">Delhi / Haryana / UP — NH-48</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
 
             <!-- Chennai-Krishnagiri -->
-            <div onclick="selectBarCorridor('chennai-krishnagiri', 'Chennai-Krishnagiri Auto')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="chennai-krishnagiri">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-[#76C457] shadow-[0_0_8px_rgba(118,196,87,0.6)]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Chennai-Krishnagiri Auto</div>
-                  <div class="text-[10px] text-[#c4dcbe]">Tamil Nadu (Oragadam, Sriperumbudur)</div>
-                </div>
+            <div onclick="selectBarCorridor('chennai-krishnagiri', 'Chennai-Krishnagiri Auto')" class="corridor-option corridor-menu-item w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="chennai-krishnagiri">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">Chennai-Krishnagiri Auto</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">Tamil Nadu — Oragadam, Sriperumbudur</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
 
             <!-- Hyderabad -->
-            <div onclick="selectBarCorridor('hyderabad', 'Hyderabad Cyber Belt')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="hyderabad">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-[#2A7C13] shadow-[0_0_8px_rgba(42,124,19,0.6)]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Hyderabad Cyber Belt</div>
-                  <div class="text-[10px] text-[#c4dcbe]">Telangana (ORR, Shamshabad)</div>
-                </div>
+            <div onclick="selectBarCorridor('hyderabad', 'Hyderabad Cyber Belt')" class="corridor-option corridor-menu-item w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="hyderabad">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">Hyderabad Cyber Belt</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">Telangana — ORR, Shamshabad</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
 
             <!-- Kolkata -->
-            <div onclick="selectBarCorridor('kolkata', 'Kolkata Eastern Hub')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="kolkata">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Kolkata Eastern Hub</div>
-                  <div class="text-[10px] text-[#c4dcbe]">West Bengal (Howrah, Dankuni)</div>
-                </div>
+            <div onclick="selectBarCorridor('kolkata', 'Kolkata Eastern Hub')" class="corridor-option corridor-menu-item w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="kolkata">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">Kolkata Eastern Hub</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">West Bengal — Howrah, Dankuni</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
 
             <!-- Punjab-Haryana GT -->
-            <div onclick="selectBarCorridor('punjab-gt', 'Punjab-Haryana GT')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="punjab-gt">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Punjab-Haryana GT Road</div>
-                  <div class="text-[10px] text-[#c4dcbe]">Punjab / HR (Amritsar, Ludhiana)</div>
-                </div>
+            <div onclick="selectBarCorridor('punjab-gt', 'Punjab-Haryana GT')" class="corridor-option corridor-menu-item w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="punjab-gt">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">Punjab-Haryana GT Road</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">Punjab / HR — Amritsar, Ludhiana</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
 
             <!-- Gujarat Corridor -->
-            <div onclick="selectBarCorridor('gujarat', 'Gujarat Corridor')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="gujarat">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Gujarat Industrial Corridor</div>
-                  <div class="text-[10px] text-[#c4dcbe]">Gujarat (Ahmedabad, Vadodara, Surat)</div>
-                </div>
+            <div onclick="selectBarCorridor('gujarat', 'Gujarat Corridor')" class="corridor-option corridor-menu-item w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="gujarat">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">Gujarat Industrial Corridor</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">Gujarat — Ahmedabad, Vadodara, Surat</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
 
             <!-- Central India Grid -->
-            <div onclick="selectBarCorridor('central-india', 'Central India Grid')" class="corridor-option corridor-menu-item w-full text-left px-3 py-2 rounded-xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="central-india">
-              <div class="flex items-center gap-2.5">
-                <div class="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]"></div>
-                <div>
-                  <div class="font-bold text-xs text-[#FFF8CF] group-hover:text-white">Central Logistics Grid</div>
-                  <div class="text-[10px] text-[#c4dcbe]">Nagpur / Raipur (MIHAN, Bhilai)</div>
-                </div>
+            <div onclick="selectBarCorridor('central-india', 'Central India Grid')" class="corridor-option corridor-menu-item w-full text-left px-4 py-2.5 rounded-2xl flex items-center justify-between group text-[#c4dcbe]" data-corridor-id="central-india">
+              <div>
+                <div class="font-extrabold text-[11px] text-[#FFF8CF] group-hover:text-white tracking-wide">Central Logistics Grid</div>
+                <div class="text-[9.5px] text-[#c4dcbe]/80 mt-0.5">Nagpur / Raipur — MIHAN, Bhilai</div>
               </div>
               <i data-lucide="check" class="corridor-check-icon hidden w-3.5 h-3.5 text-[#76C457]"></i>
             </div>
+
           </div>
+
+          <!-- Footer -->
+          <div class="px-4 py-2 border-t border-[#76C457]/10 flex items-center justify-center">
+            <span class="text-[9px] text-[#c4dcbe]/50 font-bold uppercase tracking-widest">Cautio Corridor Intelligence</span>
+          </div>
+
         </div>
       </div>
 
@@ -666,7 +711,6 @@
     <div class="liquid-glass rounded-2xl p-2.5 max-w-[155px] shadow-2xl hidden md:flex flex-col gap-1.5 text-[10px]">
       <div class="font-bold text-[#FFF8CF] flex items-center justify-between">
         <span>Threat Index</span>
-        <span class="w-1.5 h-1.5 rounded-full bg-[#76C457] animate-ping"></span>
       </div>
       <div class="h-1.5 rounded-full w-full bg-gradient-to-r from-[#76C457] via-[#2A7C13] via-[#FFF8CF] via-[#FBE6C2] via-orange-500 to-rose-600 shadow"></div>
       <div class="flex justify-between text-[9px] text-[#c4dcbe] font-mono font-bold">

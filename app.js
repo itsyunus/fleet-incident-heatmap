@@ -1095,7 +1095,8 @@ function initMap() {
   // 1. Esri High-Definition Streets
   appState.tileLayers.esri_streets = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
     attribution: '',
-    maxZoom: 18,
+    maxZoom: 22,
+    maxNativeZoom: 16,
     keepBuffer: 6,
     updateWhenZooming: false,
     updateWhenIdle: true
@@ -1104,7 +1105,8 @@ function initMap() {
   // 2. Esri World High-Resolution Satellite
   appState.tileLayers.esri_satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: '',
-    maxZoom: 18,
+    maxZoom: 22,
+    maxNativeZoom: 16,
     keepBuffer: 6,
     updateWhenZooming: false,
     updateWhenIdle: true
@@ -1192,7 +1194,7 @@ function initMap() {
     chunkDelay: 10,
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
-    maxClusterRadius: 45,
+    maxClusterRadius: 85,
     zoomToBoundsOnClick: false, // We control clicking to guarantee 100% responsive "Zone In"
     iconCreateFunction: function (cluster) {
       const count = cluster.getChildCount();
@@ -1330,7 +1332,7 @@ function renderHotzonePolygons() {
         </div>
       `,
       iconSize: [120, 26],
-      iconAnchor: [60, 13]
+      iconAnchor: corridor.id === 'bangalore' ? [60, 38] : (corridor.id === 'chennai-krishnagiri' ? [60, -12] : [60, 13])
     });
 
     const marker = L.marker(corridor.center, { 
@@ -1657,35 +1659,60 @@ function parseIncidentDate(dateStr) {
   if (!dateStr) return null;
   const str = String(dateStr).trim();
 
-  // 1. Google Sheets GViz Date(year, month, day[, hr, min, sec])
-  const gvizMatch = str.match(/Date\((\d+),\s*(\d+),\s*(\d+)/i);
+  // 1. Google Sheets GViz Date(year, month, day, [hr, min, sec])
+  // Matches Date(2026,7,6) or Date(2026,7,6,14,39,26)
+  const gvizMatch = str.match(/Date\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+),\s*(\d+),\s*(\d+))?/i);
   if (gvizMatch) {
     const y = parseInt(gvizMatch[1], 10);
-    const m = parseInt(gvizMatch[2], 10); // 0-indexed
+    const m = parseInt(gvizMatch[2], 10); // GViz month is 0-indexed
     const d = parseInt(gvizMatch[3], 10);
-    return new Date(y, m, d);
+    const hr = gvizMatch[4] ? parseInt(gvizMatch[4], 10) : 0;
+    const min = gvizMatch[5] ? parseInt(gvizMatch[5], 10) : 0;
+    const sec = gvizMatch[6] ? parseInt(gvizMatch[6], 10) : 0;
+    return new Date(y, m, d, hr, min, sec);
   }
 
-  // 2. DD/MM/YYYY or DD-MM-YYYY
-  const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  // 2. DD/MM/YYYY or DD-MM-YYYY (optionally with time)
+  const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
   if (ddmmyyyy) {
     const d = parseInt(ddmmyyyy[1], 10);
-    const m = parseInt(ddmmyyyy[2], 10) - 1;
+    const m = parseInt(ddmmyyyy[2], 10) - 1; // 0-indexed month
     const y = parseInt(ddmmyyyy[3], 10);
-    return new Date(y, m, d);
+    const hr = ddmmyyyy[4] ? parseInt(ddmmyyyy[4], 10) : 0;
+    const min = ddmmyyyy[5] ? parseInt(ddmmyyyy[5], 10) : 0;
+    const sec = ddmmyyyy[6] ? parseInt(ddmmyyyy[6], 10) : 0;
+    return new Date(y, m, d, hr, min, sec);
   }
 
-  // 3. YYYY-MM-DD
-  const yyyymmdd = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  // 3. YYYY-MM-DD (optionally with time)
+  const yyyymmdd = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
   if (yyyymmdd) {
     const y = parseInt(yyyymmdd[1], 10);
     const m = parseInt(yyyymmdd[2], 10) - 1;
     const d = parseInt(yyyymmdd[3], 10);
-    return new Date(y, m, d);
+    const hr = yyyymmdd[4] ? parseInt(yyyymmdd[4], 10) : 0;
+    const min = yyyymmdd[5] ? parseInt(yyyymmdd[5], 10) : 0;
+    const sec = yyyymmdd[6] ? parseInt(yyyymmdd[6], 10) : 0;
+    return new Date(y, m, d, hr, min, sec);
   }
 
   const parsed = new Date(str);
   return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDisplayDate(dateStr) {
+  const dateObj = parseIncidentDate(dateStr);
+  if (!dateObj) return dateStr || 'N/A'; // Fallback to raw if unparseable
+  
+  return dateObj.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  }) + ' • ' + dateObj.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
 }
 
 function isIncidentToday(dateStr) {
@@ -2097,7 +2124,7 @@ function updateAccidentSpotlight() {
           ${acc.details || acc.subRequest || 'Critical accident impact telemetry detected.'}
         </div>
         <div class="flex items-center justify-between text-[11px] text-[#c4dcbe] mb-3">
-          <span>${acc.raisedAt || 'Live Telemetry'}</span>
+          <span>${acc.raisedAt ? formatDisplayDate(acc.raisedAt) : 'Live Telemetry'}</span>
           <span class="${acc.resolved === 'Yes' ? 'text-[#76C457] font-bold' : 'text-rose-400 font-bold'}">
             ${acc.resolved === 'Yes' ? 'Resolved' : 'Action Required'}
           </span>
@@ -2487,10 +2514,10 @@ window.inspectIncident = function(issueId) {
   if (elLoc) elLoc.textContent = inc.location;
 
   const elRaised = document.getElementById('modal-raised-at');
-  if (elRaised) elRaised.textContent = inc.raisedAt || 'N/A';
+  if (elRaised) elRaised.textContent = inc.raisedAt ? formatDisplayDate(inc.raisedAt) : 'N/A';
 
   const elResolved = document.getElementById('modal-resolved-at');
-  if (elResolved) elResolved.textContent = inc.resolvedAt || 'Pending Action';
+  if (elResolved) elResolved.textContent = inc.resolvedAt ? formatDisplayDate(inc.resolvedAt) : 'Pending Action';
 
   const elAssigned = document.getElementById('modal-assigned-to');
   if (elAssigned) elAssigned.textContent = inc.assignedTo || 'Unassigned';
