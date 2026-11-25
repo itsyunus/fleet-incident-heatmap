@@ -11,8 +11,12 @@ An interactive geospatial telemetry and accident analysis dashboard developed fo
 
 ## Local Development
 
+Serve the static frontend with any local HTTP server. Live synchronization requires the Vercel serverless function in `api/sync.js` and a `SHEET_ID` environment variable configured in Vercel. `SHEET_GID` is optional and defaults to `0`.
+
+Do not put production sheet identifiers in source files or commit them. For local API development, use `vercel dev` after configuring the environment variables locally.
+
 ```bash
-# Serve static assets using any local HTTP server
 npx serve .
-# Or open index.html directly in a modern web browser
+# For the API route and live sync, use the Vercel CLI:
+vercel dev
 ```
