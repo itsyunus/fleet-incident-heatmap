@@ -5,17 +5,6 @@
  */
 
 // Secure Telemetry Pipeline (Serverless proxy on Vercel with encrypted dynamic fallback)
-function _resolveEncryptedStreamUrl(callbackName) {
-  const cipher = "KxUBBBpVfU4ADhEnSwsKAgIYF1coChQdQ0JEJgARBwEKNxUXThZ7VCgfOkhCI04jMTdcAlplCQMwPCYEARMGAB4bCA4hJAMAFhM8UTBtYFpzJyBaEx8GKE4QEE0gFBRYHwAHAhYlFhx6UVxSLwQHTg==";
-  const keyBytes = [67, 97, 117, 116, 105, 111, 82, 97, 100, 97, 114, 84, 101, 108, 101, 109, 101, 116, 114, 121, 75, 101, 121, 50, 48, 50, 54];
-  const raw = typeof atob === 'function' ? atob(cipher) : '';
-  let base = '';
-  for (let i = 0; i < raw.length; i++) {
-    base += String.fromCharCode(raw.charCodeAt(i) ^ keyBytes[i % keyBytes.length]);
-  }
-  return `${base}${callbackName}&gid=0`;
-}
-
 // Coordinates Dictionary for Indian Cities & Strategic Corridors
 const GEO_COORDINATES = {
   "bangalore": [12.9716, 77.5946],
@@ -1528,39 +1517,15 @@ async function syncWithGoogleSheet(isManual = false) {
     // /api/sync unavailable (e.g. running on local static server) -> seamlessly fall back
   }
 
-  // Attempt 2: Fallback to dynamic encrypted stream
-  syncViaEncryptedStream(isManual);
+  showSyncUnavailable(isManual);
 }
 
-// Encrypted Stream Sync (Zero plain-text URLs in source code, connects dynamically)
-function syncViaEncryptedStream(isManual) {
-  const callbackName = 'onTelemetryStreamCallback_' + Date.now();
-
-  window[callbackName] = function (data) {
-    cleanup();
-    processGVizData(data, isManual);
-  };
-
-  const script = document.createElement('script');
-  script.id = 'telemetry-stream-script';
-  script.src = _resolveEncryptedStreamUrl(callbackName);
-
-  script.onerror = function () {
-    cleanup();
-    appState.isSyncing = false;
-    const syncIcon = document.getElementById('sync-icon');
-    if (syncIcon) syncIcon.classList.remove('animate-spin');
-    updateLiveSyncBadge("Retrying...", "amber");
-    if (isManual) showToast("Telemetry sync busy. Cached snapshot active.", "warning");
-  };
-
-  function cleanup() {
-    delete window[callbackName];
-    const el = document.getElementById('telemetry-stream-script');
-    if (el && el.parentNode) el.parentNode.removeChild(el);
-  }
-
-  document.body.appendChild(script);
+function showSyncUnavailable(isManual) {
+  appState.isSyncing = false;
+  const syncIcon = document.getElementById('sync-icon');
+  if (syncIcon) syncIcon.classList.remove('animate-spin');
+  updateLiveSyncBadge('Sync unavailable', 'red');
+  if (isManual) showToast('Live sync unavailable. Check the server configuration.', 'error');
 }
 
 // Process GViz Text (Fallback compatibility)
@@ -1571,7 +1536,7 @@ function processGVizResponse(text, isManual) {
     processGVizData(data, isManual);
   } catch (e) {
     console.error("Failed to parse GViz JSON text:", e);
-    syncViaEncryptedStream(isManual);
+    showSyncUnavailable(isManual);
   }
 }
 
