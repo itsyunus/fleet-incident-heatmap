@@ -4,16 +4,10 @@
 
 export default async function handler(req, res) {
   // 1. Read Sheet ID from Vercel Environment Variables, with encrypted fallback
-  const sheetId = process.env.SHEET_ID || (() => {
-    const cipher = "ciUPI0RZA1YMNTw6VwQ2JwcxOjYgNgtQUV55LgMxPQ8bNgsTVTsLNQQgCSQ=";
-    const key = [67,97,117,116,105,111,82,97,100,97,114,84,101,108,101,109,101,116,114,121,75,101,121,50,48,50,54].map(c => String.fromCharCode(c)).join('');
-    const buf = Buffer.from(cipher, 'base64');
-    const out = [];
-    for (let i = 0; i < buf.length; i++) {
-      out.push(String.fromCharCode(buf[i] ^ key.charCodeAt(i % key.length)));
-    }
-    return out.join('');
-  })();
+  const sheetId = process.env.SHEET_ID;
+  if (!sheetId) {
+    return res.status(500).json({ error: 'SHEET_ID is not configured.' });
+  }
 
   const gid = process.env.SHEET_GID || '0';
   const targetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&gid=${gid}`;
